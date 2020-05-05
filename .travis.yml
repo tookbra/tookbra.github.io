@@ -1,0 +1,27 @@
+language: node_js
+node_js: stable
+
+install:
+  - npm install hexo-cli
+
+script:
+  - hexo clean
+  - hexo generate -d
+
+after_script:
+  - cd ./public
+  - git init
+  - echo "okboom.org" > CNAME
+  - git config user.name "tookbra"
+  - git config user.email "tookbra@outlook.com"
+  - git add .
+  - git commit -m "Auto update docs by Travis CI."
+  - git push --force --quiet "https://${CI_TOKEN}@${GH_REF}" master:master
+
+branches:
+  only:
+    - blog
+
+env:
+  global:
+    - GH_REF: github.com/tookbra/tookbra.github.io
