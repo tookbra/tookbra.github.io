@@ -5,10 +5,9 @@ tags:
     - Spring Cloud
 categories:
     - Spring Cloud    
-#photos:
-#    - /images/spring-cloud/register.jpg    
+cover:
+    - /images/spring-cloud/service-register/logo.png    
 ---
-## Spring Cloud 服务注册
 
 ### 什么是服务注册
 
@@ -141,7 +140,7 @@ public class AutoServiceRegistrationConfiguration {
 }
 ```
    
-![](/images/spring-cloud/wenhao.jpg)
+![](/images/spring-cloud/service-register/wenhao.jpg)
 
 我都已经把裤子脱下了，给我看这些？
 
