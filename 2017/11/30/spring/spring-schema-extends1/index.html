@@ -1,0 +1,789 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 4.2.1">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/logo.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/logo.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/logo.png">
+  <link rel="mask-icon" href="/images/logo.png" color="#222">
+  <meta http-equiv="Cache-Control" content="no-transform">
+  <meta http-equiv="Cache-Control" content="no-siteapp">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+  <link rel="stylesheet" href="//cdn.jsdelivr.net/gh/fancyapps/fancybox@3/dist/jquery.fancybox.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"okboom.org","root":"/","scheme":"Gemini","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":true},"copycode":{"enable":true,"show_result":true,"style":null},"back2top":{"enable":true,"sidebar":true,"scrollpercent":true},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":true,"mediumzoom":true,"lazyload":true,"pangu":true,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":true,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":false,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":true,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}}};
+  </script>
+
+  <meta name="description" content="概述从spring 2.0以后，spring提供了schema扩展，当spring的xml配置满足不了我们的时候，我们可以使用spring schema expand来自定义xml解析器 像我们熟知的spring-context,spring-bean,spring-tx,dubbo等框架都使用了spring schema expand 我们通过以下步骤来创建一个spring schema ex">
+<meta property="og:type" content="article">
+<meta property="og:title" content="spring schema extends(一)">
+<meta property="og:url" content="https://okboom.org/2017/11/30/spring/spring-schema-extends1/index.html">
+<meta property="og:site_name" content="Ok Boom">
+<meta property="og:description" content="概述从spring 2.0以后，spring提供了schema扩展，当spring的xml配置满足不了我们的时候，我们可以使用spring schema expand来自定义xml解析器 像我们熟知的spring-context,spring-bean,spring-tx,dubbo等框架都使用了spring schema expand 我们通过以下步骤来创建一个spring schema ex">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://okboom.org/images/spring/spring-schema.png">
+<meta property="article:published_time" content="2017-11-30T06:32:28.000Z">
+<meta property="article:modified_time" content="2021-06-14T17:04:44.737Z">
+<meta property="article:author" content="tookbra">
+<meta property="article:tag" content="spring">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://okboom.org/images/spring/spring-schema.png">
+
+<link rel="canonical" href="https://okboom.org/2017/11/30/spring/spring-schema-extends1/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'zh-CN'
+  };
+</script>
+
+  <title>spring schema extends(一) | Ok Boom</title>
+  
+    <script async src="https://www.googletagmanager.com/gtag/js?id=UA-105698309-2"></script>
+    <script data-pjax>
+      if (CONFIG.hostname === location.hostname) {
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
+        gtag('config', 'UA-105698309-2');
+      }
+    </script>
+
+
+  <script data-pjax>
+    var _hmt = _hmt || [];
+    (function() {
+      var hm = document.createElement("script");
+      hm.src = "https://hm.baidu.com/hm.js?bba0be0bae0736b339e0df8f68b295f8";
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(hm, s);
+    })();
+  </script>
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">Ok Boom</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+      <p class="site-subtitle" itemprop="description">”勿忘初心，方得始终“</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-主页">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>主页</a>
+
+  </li>
+        <li class="menu-item menu-item-标签">
+
+    <a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a>
+
+  </li>
+        <li class="menu-item menu-item-分类">
+
+    <a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类</a>
+
+  </li>
+        <li class="menu-item menu-item-归档">
+
+    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a>
+
+  </li>
+        <li class="menu-item menu-item-关于">
+
+    <a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>关于</a>
+
+  </li>
+  </ul>
+</nav>
+
+
+
+
+</div>
+    </header>
+
+    
+  <div class="reading-progress-bar"></div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://okboom.org/2017/11/30/spring/spring-schema-extends1/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/logo.png">
+      <meta itemprop="name" content="tookbra">
+      <meta itemprop="description" content="Spring Cloud, Dubbo, Netty, 物联网, Java, 中间件">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Ok Boom">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          spring schema extends(一)
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2017-11-30 14:32:28" itemprop="dateCreated datePublished" datetime="2017-11-30T14:32:28+08:00">2017-11-30</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2021-06-15 01:04:44" itemprop="dateModified" datetime="2021-06-15T01:04:44+08:00">2021-06-15</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/spring/" itemprop="url" rel="index"><span itemprop="name">spring</span></a>
+                </span>
+            </span>
+
+          
+            <span id="/2017/11/30/spring/spring-schema-extends1/" class="post-meta-item leancloud_visitors" data-flag-title="spring schema extends(一)" title="阅读次数">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-eye"></i>
+              </span>
+              <span class="post-meta-item-text">阅读次数：</span>
+              <span class="leancloud-visitors-count"></span>
+            </span>
+  
+  <span class="post-meta-item">
+    
+      <span class="post-meta-item-icon">
+        <i class="far fa-comment"></i>
+      </span>
+      <span class="post-meta-item-text">Valine：</span>
+    
+    <a title="valine" href="/2017/11/30/spring/spring-schema-extends1/#valine-comments" itemprop="discussionUrl">
+      <span class="post-comments-count valine-comment-count" data-xid="/2017/11/30/spring/spring-schema-extends1/" itemprop="commentCount"></span>
+    </a>
+  </span>
+  
+  
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <p><img data-src="/images/spring/spring-schema.png" alt="spring-schema"></p>
+<h2 id="概述"><a href="#概述" class="headerlink" title="概述"></a>概述</h2><p>从spring 2.0以后，spring提供了schema扩展，当spring的xml配置满足不了我们的时候，我们可以使用spring schema expand来自定义xml解析器</p>
+<p>像我们熟知的spring-context,spring-bean,spring-tx,dubbo等框架都使用了spring schema expand</p>
+<p>我们通过以下步骤来创建一个spring schema expand</p>
+<ul>
+<li>创建xml描述</li>
+<li>编写xsd文件，描述自定义对象</li>
+<li>实现自定义NamespaceHandlerSupport</li>
+<li>实现自定义BeanDefinitionParser</li>
+<li>注册解析器到spring容器中</li>
+<li>验证结果</li>
+</ul>
+<a id="more"></a>
+<h2 id="创建xml描述"><a href="#创建xml描述" class="headerlink" title="创建xml描述"></a>创建xml描述</h2><figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">&lt;?xml version="1.0" encoding="UTF-8"?&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">beans</span> <span class="attr">xmlns</span>=<span class="string">"http://www.springframework.org/schema/beans"</span></span></span><br><span class="line"><span class="tag">       <span class="attr">xmlns:monine</span>=<span class="string">"http://www.tookbra.com/schema/monine"</span></span></span><br><span class="line"><span class="tag">       <span class="attr">xmlns:xsi</span>=<span class="string">"http://www.w3.org/2001/XMLSchema-instance"</span></span></span><br><span class="line"><span class="tag">       <span class="attr">xsi:schemaLocation</span>=<span class="string">"http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd</span></span></span><br><span class="line"><span class="tag"><span class="string">                            http://www.tookbra.com/schema/monine http://www.tookbra.com/schema/monine.xsd"</span>&gt;</span></span><br><span class="line"></span><br><span class="line">    <span class="tag">&lt;<span class="name">monine:application</span> <span class="attr">name</span>=<span class="string">"provider"</span> <span class="attr">version</span>=<span class="string">"0.0.1"</span>/&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">beans</span>&gt;</span></span><br></pre></td></tr></table></figure>
+
+<p>这里我们创建了一个Application对象，你可以理解成创建如下的一个spring bean</p>
+<figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">bean</span> <span class="attr">id</span>=<span class="string">"application"</span> <span class="attr">class</span>=<span class="string">"com.tookbra.monine.config.Application"</span>&gt;</span></span><br><span class="line">  <span class="tag">&lt;<span class="name">property</span> <span class="attr">name</span>=<span class="string">"name"</span> <span class="attr">value</span>=<span class="string">"provider"</span>/&gt;</span></span><br><span class="line">  <span class="tag">&lt;<span class="name">property</span> <span class="attr">name</span>=<span class="string">"version"</span> <span class="attr">value</span>=<span class="string">"0.0.1"</span>/&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">bean</span>&gt;</span></span><br></pre></td></tr></table></figure>
+
+
+
+<h2 id="创建xsd描述文件"><a href="#创建xsd描述文件" class="headerlink" title="创建xsd描述文件"></a>创建xsd描述文件</h2><p>在这个文件中我定义了xml命名空间为 “<a href="http://www.tookbra.com/schema/monine&quot;" target="_blank" rel="noopener">http://www.tookbra.com/schema/monine&quot;</a>, 名称为application，类型是applicationType</p>
+<figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">&lt;?xml version="1.0" encoding="utf-8" ?&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">xsd:schema</span> <span class="attr">xmlns</span>=<span class="string">"http://www.tookbra.com/schema/monine"</span></span></span><br><span class="line"><span class="tag">            <span class="attr">xmlns:xsd</span>=<span class="string">"http://www.w3.org/2001/XMLSchema"</span></span></span><br><span class="line"><span class="tag">            <span class="attr">xmlns:bean</span>=<span class="string">"http://www.springframework.org/schema/beans"</span></span></span><br><span class="line"><span class="tag">            <span class="attr">targetNamespace</span>=<span class="string">"http://www.tookbra.com/schema/monine"</span>&gt;</span></span><br><span class="line"></span><br><span class="line">    <span class="tag">&lt;<span class="name">xsd:import</span> <span class="attr">namespace</span>=<span class="string">"http://www.springframework.org/schema/beans"</span>/&gt;</span></span><br><span class="line"></span><br><span class="line">    <span class="tag">&lt;<span class="name">xsd:element</span> <span class="attr">name</span>=<span class="string">"application"</span> <span class="attr">type</span>=<span class="string">"applicationType"</span>&gt;</span></span><br><span class="line"></span><br><span class="line">    <span class="tag">&lt;/<span class="name">xsd:element</span>&gt;</span></span><br><span class="line"></span><br><span class="line">    <span class="tag">&lt;<span class="name">xsd:complexType</span> <span class="attr">name</span>=<span class="string">"applicationType"</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">xsd:attribute</span> <span class="attr">name</span>=<span class="string">"name"</span> <span class="attr">type</span>=<span class="string">"xsd:string"</span> <span class="attr">use</span>=<span class="string">"required"</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">xsd:annotation</span>&gt;</span></span><br><span class="line">                <span class="tag">&lt;<span class="name">xsd:documentation</span>&gt;</span>&lt;![CDATA[ application name. ]]&gt;<span class="tag">&lt;/<span class="name">xsd:documentation</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;/<span class="name">xsd:annotation</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;/<span class="name">xsd:attribute</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">xsd:attribute</span> <span class="attr">name</span>=<span class="string">"version"</span> <span class="attr">type</span>=<span class="string">"xsd:string"</span> <span class="attr">use</span>=<span class="string">"required"</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">xsd:annotation</span>&gt;</span></span><br><span class="line">                <span class="tag">&lt;<span class="name">xsd:documentation</span>&gt;</span>&lt;![CDATA[ application version. ]]&gt;<span class="tag">&lt;/<span class="name">xsd:documentation</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;/<span class="name">xsd:annotation</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;/<span class="name">xsd:attribute</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;/<span class="name">xsd:complexType</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">xsd:schema</span>&gt;</span></span><br></pre></td></tr></table></figure>
+
+<p>具体xml schema格式可以查看下面2个链接</p>
+<p><a href="https://www.w3.org/TR/2004/REC-xmlschema-1-20041028/" target="_blank" rel="noopener">xml schema part 1</a><br><a href="https://www.w3.org/TR/2004/REC-xmlschema-2-20041028/" target="_blank" rel="noopener">xml schema part 2</a></p>
+<h2 id="实现自定义NamespaceHandler"><a href="#实现自定义NamespaceHandler" class="headerlink" title="实现自定义NamespaceHandler"></a>实现自定义NamespaceHandler</h2><p>在这里我们注册了ApplicationBeanDefinitionParser作为application     bean解析器</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">package</span> com.tookbra.monine.config.spring.schema;</span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> org.springframework.beans.factory.xml.NamespaceHandlerSupport;</span><br><span class="line"></span><br><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment"> * <span class="doctag">@author</span> tookbra</span></span><br><span class="line"><span class="comment"> * <span class="doctag">@date</span> 2017/11/30</span></span><br><span class="line"><span class="comment"> * <span class="doctag">@description</span></span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">MonineNamespaceHandler</span> <span class="keyword">extends</span> <span class="title">NamespaceHandlerSupport</span> </span>&#123;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">init</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        registerBeanDefinitionParser(<span class="string">"application"</span>, <span class="keyword">new</span> ApplicationBeanDefinitionParser());</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+
+
+<p>NamespaceHandler接口有3个方法</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/*</span></span><br><span class="line"><span class="comment"> * Copyright 2002-2012 the original author or authors.</span></span><br><span class="line"><span class="comment"> *</span></span><br><span class="line"><span class="comment"> * Licensed under the Apache License, Version 2.0 (the "License");</span></span><br><span class="line"><span class="comment"> * you may not use this file except in compliance with the License.</span></span><br><span class="line"><span class="comment"> * You may obtain a copy of the License at</span></span><br><span class="line"><span class="comment"> *</span></span><br><span class="line"><span class="comment"> *      http://www.apache.org/licenses/LICENSE-2.0</span></span><br><span class="line"><span class="comment"> *</span></span><br><span class="line"><span class="comment"> * Unless required by applicable law or agreed to in writing, software</span></span><br><span class="line"><span class="comment"> * distributed under the License is distributed on an "AS IS" BASIS,</span></span><br><span class="line"><span class="comment"> * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.</span></span><br><span class="line"><span class="comment"> * See the License for the specific language governing permissions and</span></span><br><span class="line"><span class="comment"> * limitations under the License.</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">package</span> org.springframework.beans.factory.xml;</span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> org.w3c.dom.Element;</span><br><span class="line"><span class="keyword">import</span> org.w3c.dom.Node;</span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> org.springframework.beans.factory.config.BeanDefinition;</span><br><span class="line"><span class="keyword">import</span> org.springframework.beans.factory.config.BeanDefinitionHolder;</span><br><span class="line"></span><br><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment"> * Base interface used by the &#123;<span class="doctag">@link</span> DefaultBeanDefinitionDocumentReader&#125;</span></span><br><span class="line"><span class="comment"> * for handling custom namespaces in a Spring XML configuration file.</span></span><br><span class="line"><span class="comment"> *</span></span><br><span class="line"><span class="comment"> * &lt;p&gt;Implementations are expected to return implementations of the</span></span><br><span class="line"><span class="comment"> * &#123;<span class="doctag">@link</span> BeanDefinitionParser&#125; interface for custom top-level tags and</span></span><br><span class="line"><span class="comment"> * implementations of the &#123;<span class="doctag">@link</span> BeanDefinitionDecorator&#125; interface for</span></span><br><span class="line"><span class="comment"> * custom nested tags.</span></span><br><span class="line"><span class="comment"> *</span></span><br><span class="line"><span class="comment"> * &lt;p&gt;The parser will call &#123;<span class="doctag">@link</span> #parse&#125; when it encounters a custom tag</span></span><br><span class="line"><span class="comment"> * directly under the &#123;<span class="doctag">@code</span> &lt;beans&gt;&#125; tags and &#123;<span class="doctag">@link</span> #decorate&#125; when</span></span><br><span class="line"><span class="comment"> * it encounters a custom tag directly under a &#123;<span class="doctag">@code</span> &lt;bean&gt;&#125; tag.</span></span><br><span class="line"><span class="comment"> *</span></span><br><span class="line"><span class="comment"> * &lt;p&gt;Developers writing their own custom element extensions typically will</span></span><br><span class="line"><span class="comment"> * not implement this interface directly, but rather make use of the provided</span></span><br><span class="line"><span class="comment"> * &#123;<span class="doctag">@link</span> NamespaceHandlerSupport&#125; class.</span></span><br><span class="line"><span class="comment"> *</span></span><br><span class="line"><span class="comment"> * <span class="doctag">@author</span> Rob Harrop</span></span><br><span class="line"><span class="comment"> * <span class="doctag">@author</span> Erik Wiersma</span></span><br><span class="line"><span class="comment"> * <span class="doctag">@since</span> 2.0</span></span><br><span class="line"><span class="comment"> * <span class="doctag">@see</span> DefaultBeanDefinitionDocumentReader</span></span><br><span class="line"><span class="comment"> * <span class="doctag">@see</span> NamespaceHandlerResolver</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">interface</span> <span class="title">NamespaceHandler</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">	<span class="comment">/**</span></span><br><span class="line"><span class="comment">	 * Invoked by the &#123;<span class="doctag">@link</span> DefaultBeanDefinitionDocumentReader&#125; after</span></span><br><span class="line"><span class="comment">	 * construction but before any custom elements are parsed.</span></span><br><span class="line"><span class="comment">	 * <span class="doctag">@see</span> NamespaceHandlerSupport#registerBeanDefinitionParser(String, BeanDefinitionParser)</span></span><br><span class="line"><span class="comment">	 */</span></span><br><span class="line">	<span class="function"><span class="keyword">void</span> <span class="title">init</span><span class="params">()</span></span>;</span><br><span class="line"></span><br><span class="line">	<span class="comment">/**</span></span><br><span class="line"><span class="comment">	 * Parse the specified &#123;<span class="doctag">@link</span> Element&#125; and register any resulting</span></span><br><span class="line"><span class="comment">	 * &#123;<span class="doctag">@link</span> BeanDefinition BeanDefinitions&#125; with the</span></span><br><span class="line"><span class="comment">	 * &#123;<span class="doctag">@link</span> org.springframework.beans.factory.support.BeanDefinitionRegistry&#125;</span></span><br><span class="line"><span class="comment">	 * that is embedded in the supplied &#123;<span class="doctag">@link</span> ParserContext&#125;.</span></span><br><span class="line"><span class="comment">	 * &lt;p&gt;Implementations should return the primary &#123;<span class="doctag">@code</span> BeanDefinition&#125;</span></span><br><span class="line"><span class="comment">	 * that results from the parse phase if they wish to be used nested</span></span><br><span class="line"><span class="comment">	 * inside (for example) a &#123;<span class="doctag">@code</span> &lt;property&gt;&#125; tag.</span></span><br><span class="line"><span class="comment">	 * &lt;p&gt;Implementations may return &#123;<span class="doctag">@code</span> null&#125; if they will</span></span><br><span class="line"><span class="comment">	 * &lt;strong&gt;not&lt;/strong&gt; be used in a nested scenario.</span></span><br><span class="line"><span class="comment">	 * <span class="doctag">@param</span> element the element that is to be parsed into one or more &#123;<span class="doctag">@code</span> BeanDefinitions&#125;</span></span><br><span class="line"><span class="comment">	 * <span class="doctag">@param</span> parserContext the object encapsulating the current state of the parsing process</span></span><br><span class="line"><span class="comment">	 * <span class="doctag">@return</span> the primary &#123;<span class="doctag">@code</span> BeanDefinition&#125; (can be &#123;<span class="doctag">@code</span> null&#125; as explained above)</span></span><br><span class="line"><span class="comment">	 */</span></span><br><span class="line">	<span class="function">BeanDefinition <span class="title">parse</span><span class="params">(Element element, ParserContext parserContext)</span></span>;</span><br><span class="line"></span><br><span class="line">	<span class="comment">/**</span></span><br><span class="line"><span class="comment">	 * Parse the specified &#123;<span class="doctag">@link</span> Node&#125; and decorate the supplied</span></span><br><span class="line"><span class="comment">	 * &#123;<span class="doctag">@link</span> BeanDefinitionHolder&#125;, returning the decorated definition.</span></span><br><span class="line"><span class="comment">	 * &lt;p&gt;The &#123;<span class="doctag">@link</span> Node&#125; may be either an &#123;<span class="doctag">@link</span> org.w3c.dom.Attr&#125; or an</span></span><br><span class="line"><span class="comment">	 * &#123;<span class="doctag">@link</span> Element&#125;, depending on whether a custom attribute or element</span></span><br><span class="line"><span class="comment">	 * is being parsed.</span></span><br><span class="line"><span class="comment">	 * &lt;p&gt;Implementations may choose to return a completely new definition,</span></span><br><span class="line"><span class="comment">	 * which will replace the original definition in the resulting</span></span><br><span class="line"><span class="comment">	 * &#123;<span class="doctag">@link</span> org.springframework.beans.factory.BeanFactory&#125;.</span></span><br><span class="line"><span class="comment">	 * &lt;p&gt;The supplied &#123;<span class="doctag">@link</span> ParserContext&#125; can be used to register any</span></span><br><span class="line"><span class="comment">	 * additional beans needed to support the main definition.</span></span><br><span class="line"><span class="comment">	 * <span class="doctag">@param</span> source the source element or attribute that is to be parsed</span></span><br><span class="line"><span class="comment">	 * <span class="doctag">@param</span> definition the current bean definition</span></span><br><span class="line"><span class="comment">	 * <span class="doctag">@param</span> parserContext the object encapsulating the current state of the parsing process</span></span><br><span class="line"><span class="comment">	 * <span class="doctag">@return</span> the decorated definition (to be registered in the BeanFactory),</span></span><br><span class="line"><span class="comment">	 * or simply the original bean definition if no decoration is required.</span></span><br><span class="line"><span class="comment">	 * A &#123;<span class="doctag">@code</span> null&#125; value is strictly speaking invalid, but will be leniently</span></span><br><span class="line"><span class="comment">	 * treated like the case where the original bean definition gets returned.</span></span><br><span class="line"><span class="comment">	 */</span></span><br><span class="line">	<span class="function">BeanDefinitionHolder <span class="title">decorate</span><span class="params">(Node source, BeanDefinitionHolder definition, ParserContext parserContext)</span></span>;</span><br><span class="line"></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<ul>
+<li>init<br><code>NamespaceHandler</code>被使用之前调用，完成<code>NamespaceHandler的初始化</code></li>
+<li>parse<br>当遇到顶层元素时被调用</li>
+<li>decorate<br>当遇到一个属性或者嵌套元素的时候调用</li>
+</ul>
+<h2 id="实现自定义BeanDefinitionParser"><a href="#实现自定义BeanDefinitionParser" class="headerlink" title="实现自定义BeanDefinitionParser"></a>实现自定义BeanDefinitionParser</h2><p>在这个解析器中我们可以通过Element来访问xml元素来解析我们自定义的xml内容</p>
+<p>在创建xsd描述文件的时候我们没有去定义id属性作为bean的标识符，那么这里我们去重写shouldGenerateId方法来生成id</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">package</span> com.tookbra.monine.config.spring.schema;</span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> com.tookbra.monine.config.Application;</span><br><span class="line"><span class="keyword">import</span> org.springframework.beans.factory.support.BeanDefinitionBuilder;</span><br><span class="line"><span class="keyword">import</span> org.springframework.beans.factory.xml.AbstractSimpleBeanDefinitionParser;</span><br><span class="line"><span class="keyword">import</span> org.springframework.beans.factory.xml.ParserContext;</span><br><span class="line"><span class="keyword">import</span> org.springframework.util.StringUtils;</span><br><span class="line"><span class="keyword">import</span> org.w3c.dom.Element;</span><br><span class="line"></span><br><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment"> * <span class="doctag">@author</span> tookbra</span></span><br><span class="line"><span class="comment"> * <span class="doctag">@date</span> 2017/11/30</span></span><br><span class="line"><span class="comment"> * <span class="doctag">@description</span></span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">ApplicationBeanDefinitionParser</span> <span class="keyword">extends</span> <span class="title">AbstractSimpleBeanDefinitionParser</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="keyword">protected</span> Class&lt;?&gt; getBeanClass(Element element) &#123;</span><br><span class="line">        <span class="keyword">return</span> Application<span class="class">.<span class="keyword">class</span></span>;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">protected</span> <span class="keyword">void</span> <span class="title">doParse</span><span class="params">(Element element, ParserContext parserContext, BeanDefinitionBuilder builder)</span> </span>&#123;</span><br><span class="line">        String name = element.getAttribute(<span class="string">"name"</span>);</span><br><span class="line">        String version = element.getAttribute(<span class="string">"version"</span>);</span><br><span class="line"></span><br><span class="line">        <span class="keyword">if</span>(!StringUtils.isEmpty(name)) &#123;</span><br><span class="line">            builder.addPropertyValue(<span class="string">"name"</span>, name);</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">if</span>(!StringUtils.isEmpty(version)) &#123;</span><br><span class="line">            builder.addPropertyValue(<span class="string">"version"</span>, version);</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">protected</span> <span class="keyword">boolean</span> <span class="title">shouldGenerateId</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        <span class="keyword">return</span> <span class="keyword">true</span>;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+
+
+<h2 id="注册解析器到spring容器中"><a href="#注册解析器到spring容器中" class="headerlink" title="注册解析器到spring容器中"></a>注册解析器到spring容器中</h2><p>解析器，xsd描述文件都写好了，我们怎么让spring解析xml的过程中识别我们定义的元素并交给我们定义的NamespaceHandler处理呢？</p>
+<p>我们需要在META-INF文件下创建2个文件，分别是spring.handlers，spring.schemas</p>
+<ul>
+<li>META-INF/spring.handlers<figure class="highlight properties"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">http\://www.tookbra.com/schema/monine</span>=<span class="string">com.tookbra.monine.config.spring.schema.MonineNamespaceHandler</span></span><br></pre></td></tr></table></figure>
+在spring.handlers文件中格式为：XML Schema Namespace=命名空间处理类</li>
+<li>META-INF/spring.schemas<figure class="highlight properties"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">http\://www.tookbra.com/schema/monine.xsd</span>=<span class="string">META-INF/monine.xsd</span></span><br></pre></td></tr></table></figure>
+在spring.handlers文件中格式为 xsi:schemaLocation=xsd描述文件路径<br><code>:</code>字符是Java属性格式中的分隔符，因此<code>:</code>URI中的 字符需要使用反斜杠进行转义</li>
+</ul>
+<h2 id="验证结果"><a href="#验证结果" class="headerlink" title="验证结果"></a>验证结果</h2><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">package</span> com.tookbra.monine;</span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> com.tookbra.monine.config.Application;</span><br><span class="line"><span class="keyword">import</span> org.springframework.context.support.ClassPathXmlApplicationContext;</span><br><span class="line"></span><br><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment"> * <span class="doctag">@author</span> tookbra</span></span><br><span class="line"><span class="comment"> * <span class="doctag">@date</span> 2017/11/30</span></span><br><span class="line"><span class="comment"> * <span class="doctag">@description</span></span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">Main</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span> </span>&#123;</span><br><span class="line">        ClassPathXmlApplicationContext context = <span class="keyword">new</span> ClassPathXmlApplicationContext(<span class="string">"monine.xml"</span>);</span><br><span class="line">        context.start();</span><br><span class="line">        Application applicationConfig = (Application)context.getBean(<span class="string">"provider"</span>);</span><br><span class="line">        System.out.printf(applicationConfig.getName());</span><br><span class="line"></span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>不出意外的话，我们可以看到输出结果为：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">provider</span><br></pre></td></tr></table></figure>
+
+
+
+<h2 id="参考资料"><a href="#参考资料" class="headerlink" title="参考资料"></a>参考资料</h2><p><a href="https://github.com/tookbra/spring-learn/blob/master/spring-schema/src/main/java/com/tookbra/monine/Main.java" target="_blank" rel="noopener">本文代码地址</a><br><a href="https://docs.spring.io/spring/docs/4.2.x/spring-framework-reference/html/xsd-configuration.html" target="_blank" rel="noopener">spring schema expand 1</a><br><a href="https://docs.spring.io/spring/docs/4.2.x/spring-framework-reference/html/xml-custom.html" target="_blank" rel="noopener">spring schema expand 2</a></p>
+<p>  ​</p>
+<p>  ​</p>
+<p>  ​</p>
+<p>  ​</p>
+<p>  ​</p>
+<p>  ​</p>
+<p>  ​</p>
+
+    </div>
+
+    
+    
+    
+        
+
+<div>
+<ul class="post-copyright">
+  <li class="post-copyright-author">
+    <strong>本文作者： </strong>tookbra
+  </li>
+  <li class="post-copyright-link">
+    <strong>本文链接：</strong>
+    <a href="https://okboom.org/2017/11/30/spring/spring-schema-extends1/" title="spring schema extends(一)">https://okboom.org/2017/11/30/spring/spring-schema-extends1/</a>
+  </li>
+  <li class="post-copyright-license">
+    <strong>版权声明： </strong>本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" rel="noopener" target="_blank"><i class="fab fa-fw fa-creative-commons"></i>BY-NC-SA</a> 许可协议。转载请注明出处！
+  </li>
+</ul>
+</div>
+
+
+      <footer class="post-footer">
+          
+          <div class="post-tags">
+              <a href="/tags/spring/" rel="tag"><i class="fa fa-tag"></i> spring</a>
+          </div>
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2017/09/06/spring-cloud/config/Spring-Cloud-Config-Server-Source/" rel="prev" title="Spring Cloud Config Server 解析">
+      <i class="fa fa-chevron-left"></i> Spring Cloud Config Server 解析
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/2017/12/01/spring/spring-schema-extends2/" rel="next" title="spring schema extends2(二)">
+      spring schema extends2(二) <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+    <div class="comments" id="valine-comments"></div>
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#概述"><span class="nav-number">1.</span> <span class="nav-text">概述</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#创建xml描述"><span class="nav-number">2.</span> <span class="nav-text">创建xml描述</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#创建xsd描述文件"><span class="nav-number">3.</span> <span class="nav-text">创建xsd描述文件</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#实现自定义NamespaceHandler"><span class="nav-number">4.</span> <span class="nav-text">实现自定义NamespaceHandler</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#实现自定义BeanDefinitionParser"><span class="nav-number">5.</span> <span class="nav-text">实现自定义BeanDefinitionParser</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#注册解析器到spring容器中"><span class="nav-number">6.</span> <span class="nav-text">注册解析器到spring容器中</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#验证结果"><span class="nav-number">7.</span> <span class="nav-text">验证结果</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#参考资料"><span class="nav-number">8.</span> <span class="nav-text">参考资料</span></a></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="tookbra"
+      src="/images/logo.png">
+  <p class="site-author-name" itemprop="name">tookbra</p>
+  <div class="site-description" itemprop="description">Spring Cloud, Dubbo, Netty, 物联网, Java, 中间件</div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives">
+          <span class="site-state-item-count">38</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+        <span class="site-state-item-count">11</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+        <span class="site-state-item-count">14</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author motion-element">
+      <span class="links-of-author-item">
+        <a href="https://github.com/tookbra" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;tookbra" rel="noopener" target="_blank"><i class="fab fa-github fa-fw"></i></a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:tookbra@gmail.com" title="E-Mail → mailto:tookbra@gmail.com" rel="noopener" target="_blank"><i class="fa fa-envelope fa-fw"></i></a>
+      </span>
+  </div>
+  <div class="cc-license motion-element" itemprop="license">
+    <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" class="cc-opacity" rel="noopener" target="_blank"><img src="/images/cc-by-nc-sa.svg" alt="Creative Commons"></a>
+  </div>
+
+
+
+      </div>
+        <div class="back-to-top motion-element">
+          <i class="fa fa-arrow-up"></i>
+          <span>0%</span>
+        </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+
+<div class="copyright">
+  
+  &copy; 2017 – 
+  <span itemprop="copyrightYear">2021</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">tookbra</span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Gemini</a> 强力驱动
+  </div>
+
+        
+
+
+
+
+
+
+<script data-pjax>
+  (function() {
+    function leancloudSelector(url) {
+      url = encodeURI(url);
+      return document.getElementById(url).querySelector('.leancloud-visitors-count');
+    }
+
+    function addCount(Counter) {
+      var visitors = document.querySelector('.leancloud_visitors');
+      var url = decodeURI(visitors.id);
+      var title = visitors.dataset.flagTitle;
+
+      Counter('get', '/classes/Counter?where=' + encodeURIComponent(JSON.stringify({ url })))
+        .then(response => response.json())
+        .then(({ results }) => {
+          if (results.length > 0) {
+            var counter = results[0];
+            leancloudSelector(url).innerText = counter.time + 1;
+            Counter('put', '/classes/Counter/' + counter.objectId, { time: { '__op': 'Increment', 'amount': 1 } })
+              .catch(error => {
+                console.error('Failed to save visitor count', error);
+              });
+          } else {
+              leancloudSelector(url).innerText = 'Counter not initialized! More info at console err msg.';
+              console.error('ATTENTION! LeanCloud counter has security bug, see how to solve it here: https://github.com/theme-next/hexo-leancloud-counter-security. \n However, you can still use LeanCloud without security, by setting `security` option to `false`.');
+            
+          }
+        })
+        .catch(error => {
+          console.error('LeanCloud Counter Error', error);
+        });
+    }
+
+    function showTime(Counter) {
+      var visitors = document.querySelectorAll('.leancloud_visitors');
+      var entries = [...visitors].map(element => {
+        return decodeURI(element.id);
+      });
+
+      Counter('get', '/classes/Counter?where=' + encodeURIComponent(JSON.stringify({ url: { '$in': entries } })))
+        .then(response => response.json())
+        .then(({ results }) => {
+          for (let url of entries) {
+            let target = results.find(item => item.url === url);
+            leancloudSelector(url).innerText = target ? target.time : 0;
+          }
+        })
+        .catch(error => {
+          console.error('LeanCloud Counter Error', error);
+        });
+    }
+
+    let { app_id, app_key, server_url } = {"enable":true,"app_id":"uJIVXaXi09cKMc5dgb90kxxM-gzGzoHsz","app_key":"yf8wJTDY78HMHMgsz92ReKgm","server_url":null,"security":true};
+    function fetchData(api_server) {
+      var Counter = (method, url, data) => {
+        return fetch(`${api_server}/1.1${url}`, {
+          method,
+          headers: {
+            'X-LC-Id'     : app_id,
+            'X-LC-Key'    : app_key,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(data)
+        });
+      };
+      if (CONFIG.page.isPost) {
+        if (CONFIG.hostname !== location.hostname) return;
+        addCount(Counter);
+      } else if (document.querySelectorAll('.post-title-link').length >= 1) {
+        showTime(Counter);
+      }
+    }
+
+    let api_server = app_id.slice(-9) !== '-MdYXbMMI' ? server_url : `https://${app_id.slice(0, 8).toLowerCase()}.api.lncldglobal.com`;
+
+    if (api_server) {
+      fetchData(api_server);
+    } else {
+      fetch('https://app-router.leancloud.cn/2/route?appId=' + app_id)
+        .then(response => response.json())
+        .then(({ api_server }) => {
+          fetchData('https://' + api_server);
+        });
+    }
+  })();
+</script>
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="//cdn.jsdelivr.net/gh/theme-next/theme-next-pjax@0/pjax.min.js"></script>
+  <script src="//cdn.jsdelivr.net/npm/jquery@3/dist/jquery.min.js"></script>
+  <script src="//cdn.jsdelivr.net/gh/fancyapps/fancybox@3/dist/jquery.fancybox.min.js"></script>
+  <script src="//cdn.jsdelivr.net/npm/medium-zoom@1/dist/medium-zoom.min.js"></script>
+  <script src="//cdn.jsdelivr.net/npm/lozad@1/dist/lozad.min.js"></script>
+  <script src="//cdn.jsdelivr.net/npm/pangu@4/dist/browser/pangu.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/pisces.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+  <script>
+var pjax = new Pjax({
+  selectors: [
+    'head title',
+    '#page-configurations',
+    '.content-wrap',
+    '.post-toc-wrap',
+    '.languages',
+    '#pjax'
+  ],
+  switches: {
+    '.post-toc-wrap': Pjax.switches.innerHTML
+  },
+  analytics: false,
+  cacheBust: false,
+  scrollTo : !CONFIG.bookmark.enable
+});
+
+window.addEventListener('pjax:success', () => {
+  document.querySelectorAll('script[data-pjax], script#page-configurations, #pjax script').forEach(element => {
+    var code = element.text || element.textContent || element.innerHTML || '';
+    var parent = element.parentNode;
+    parent.removeChild(element);
+    var script = document.createElement('script');
+    if (element.id) {
+      script.id = element.id;
+    }
+    if (element.className) {
+      script.className = element.className;
+    }
+    if (element.type) {
+      script.type = element.type;
+    }
+    if (element.src) {
+      script.src = element.src;
+      // Force synchronous loading of peripheral JS.
+      script.async = false;
+    }
+    if (element.dataset.pjax !== undefined) {
+      script.dataset.pjax = '';
+    }
+    if (code !== '') {
+      script.appendChild(document.createTextNode(code));
+    }
+    parent.appendChild(script);
+  });
+  NexT.boot.refresh();
+  // Define Motion Sequence & Bootstrap Motion.
+  if (CONFIG.motion.enable) {
+    NexT.motion.integrator
+      .init()
+      .add(NexT.motion.middleWares.subMenu)
+      .add(NexT.motion.middleWares.postList)
+      .bootstrap();
+  }
+  NexT.utils.updateSidebarPosition();
+});
+</script>
+
+
+
+
+  
+  <script data-pjax>
+    (function(){
+      var bp = document.createElement('script');
+      var curProtocol = window.location.protocol.split(':')[0];
+      bp.src = (curProtocol === 'https') ? 'https://zz.bdstatic.com/linksubmit/push.js' : 'http://push.zhanzhang.baidu.com/push.js';
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(bp, s);
+    })();
+  </script>
+
+
+
+
+
+
+
+
+
+
+
+<script data-pjax>
+document.querySelectorAll('.pdfobject-container').forEach(element => {
+  let url = element.dataset.target;
+  let pdfOpenParams = {
+    navpanes : 0,
+    toolbar  : 0,
+    statusbar: 0,
+    pagemode : 'thumbs',
+    view     : 'FitH'
+  };
+  let pdfOpenFragment = '#' + Object.entries(pdfOpenParams).map(([key, value]) => `${key}=${encodeURIComponent(value)}`).join('&');
+  let fullURL = `/lib/pdf/web/viewer.html?file=${encodeURIComponent(url)}${pdfOpenFragment}`;
+
+  if (NexT.utils.supportsPDFs()) {
+    element.innerHTML = `<embed class="pdfobject" src="${url + pdfOpenFragment}" type="application/pdf" style="height: ${element.dataset.height};">`;
+  } else {
+    element.innerHTML = `<iframe src="${fullURL}" style="height: ${element.dataset.height};" frameborder="0"></iframe>`;
+  }
+});
+</script>
+
+
+<script data-pjax>
+if (document.querySelectorAll('pre.mermaid').length) {
+  NexT.utils.getScript('//cdn.jsdelivr.net/npm/mermaid@8/dist/mermaid.min.js', () => {
+    mermaid.initialize({
+      theme    : 'forest',
+      logLevel : 3,
+      flowchart: { curve     : 'linear' },
+      gantt    : { axisFormat: '%m/%d/%Y' },
+      sequence : { actorMargin: 50 }
+    });
+  }, window.mermaid);
+}
+</script>
+
+
+    <div id="pjax">
+  
+
+  
+
+  
+
+
+<script>
+NexT.utils.loadComments(document.querySelector('#valine-comments'), () => {
+  NexT.utils.getScript('//unpkg.com/valine/dist/Valine.min.js', () => {
+    var GUEST = ['nick', 'mail', 'link'];
+    var guest = 'nick,mail,link';
+    guest = guest.split(',').filter(item => {
+      return GUEST.includes(item);
+    });
+    new Valine({
+      el         : '#valine-comments',
+      verify     : false,
+      notify     : false,
+      appId      : 'uJIVXaXi09cKMc5dgb90kxxM-gzGzoHsz',
+      appKey     : 'yf8wJTDY78HMHMgsz92ReKgm',
+      placeholder: "欢迎留言",
+      avatar     : 'mm',
+      meta       : guest,
+      pageSize   : '10' || 10,
+      visitor    : false,
+      lang       : '' || 'zh-cn',
+      path       : location.pathname,
+      recordIP   : false,
+      serverURLs : ''
+    });
+  }, window.Valine);
+});
+</script>
+
+    </div>
+  <script src="/live2d-widget/autoload.js"></script>
+</body>
+</html>

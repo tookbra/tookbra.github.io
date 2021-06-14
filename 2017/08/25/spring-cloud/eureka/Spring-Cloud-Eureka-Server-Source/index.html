@@ -1,0 +1,766 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 4.2.1">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/logo.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/logo.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/logo.png">
+  <link rel="mask-icon" href="/images/logo.png" color="#222">
+  <meta http-equiv="Cache-Control" content="no-transform">
+  <meta http-equiv="Cache-Control" content="no-siteapp">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+  <link rel="stylesheet" href="//cdn.jsdelivr.net/gh/fancyapps/fancybox@3/dist/jquery.fancybox.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"okboom.org","root":"/","scheme":"Gemini","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":true},"copycode":{"enable":true,"show_result":true,"style":null},"back2top":{"enable":true,"sidebar":true,"scrollpercent":true},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":true,"mediumzoom":true,"lazyload":true,"pangu":true,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":true,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":false,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":true,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}}};
+  </script>
+
+  <meta name="description" content="[Spring Cloud Eureka]  Spring Cloud Eureka(一) 前身今世 Spring Cloud Eureka(二) 配置文件 Spring Cloud Eureka(三) 注册中心 Spring Cloud Eureka(四) 注册中心源码 Spring Cloud Eureka(五) 客户端源码 Spring Cloud Eureka(六) 服务注册 Sprin">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Spring Cloud Eureka(四) 注册中心源码">
+<meta property="og:url" content="https://okboom.org/2017/08/25/spring-cloud/eureka/Spring-Cloud-Eureka-Server-Source/index.html">
+<meta property="og:site_name" content="Ok Boom">
+<meta property="og:description" content="[Spring Cloud Eureka]  Spring Cloud Eureka(一) 前身今世 Spring Cloud Eureka(二) 配置文件 Spring Cloud Eureka(三) 注册中心 Spring Cloud Eureka(四) 注册中心源码 Spring Cloud Eureka(五) 客户端源码 Spring Cloud Eureka(六) 服务注册 Sprin">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://okboom.org/images/spring-cloud/2017-08-25-eureka-logo-2627.png">
+<meta property="article:published_time" content="2017-08-25T03:26:13.000Z">
+<meta property="article:modified_time" content="2021-06-14T17:04:44.737Z">
+<meta property="article:author" content="tookbra">
+<meta property="article:tag" content="eureka">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://okboom.org/images/spring-cloud/2017-08-25-eureka-logo-2627.png">
+
+<link rel="canonical" href="https://okboom.org/2017/08/25/spring-cloud/eureka/Spring-Cloud-Eureka-Server-Source/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'zh-CN'
+  };
+</script>
+
+  <title>Spring Cloud Eureka(四) 注册中心源码 | Ok Boom</title>
+  
+    <script async src="https://www.googletagmanager.com/gtag/js?id=UA-105698309-2"></script>
+    <script data-pjax>
+      if (CONFIG.hostname === location.hostname) {
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
+        gtag('config', 'UA-105698309-2');
+      }
+    </script>
+
+
+  <script data-pjax>
+    var _hmt = _hmt || [];
+    (function() {
+      var hm = document.createElement("script");
+      hm.src = "https://hm.baidu.com/hm.js?bba0be0bae0736b339e0df8f68b295f8";
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(hm, s);
+    })();
+  </script>
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">Ok Boom</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+      <p class="site-subtitle" itemprop="description">”勿忘初心，方得始终“</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-主页">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>主页</a>
+
+  </li>
+        <li class="menu-item menu-item-标签">
+
+    <a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a>
+
+  </li>
+        <li class="menu-item menu-item-分类">
+
+    <a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类</a>
+
+  </li>
+        <li class="menu-item menu-item-归档">
+
+    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a>
+
+  </li>
+        <li class="menu-item menu-item-关于">
+
+    <a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>关于</a>
+
+  </li>
+  </ul>
+</nav>
+
+
+
+
+</div>
+    </header>
+
+    
+  <div class="reading-progress-bar"></div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://okboom.org/2017/08/25/spring-cloud/eureka/Spring-Cloud-Eureka-Server-Source/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/logo.png">
+      <meta itemprop="name" content="tookbra">
+      <meta itemprop="description" content="Spring Cloud, Dubbo, Netty, 物联网, Java, 中间件">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Ok Boom">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          Spring Cloud Eureka(四) 注册中心源码
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2017-08-25 11:26:13" itemprop="dateCreated datePublished" datetime="2017-08-25T11:26:13+08:00">2017-08-25</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2021-06-15 01:04:44" itemprop="dateModified" datetime="2021-06-15T01:04:44+08:00">2021-06-15</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/eureka/" itemprop="url" rel="index"><span itemprop="name">eureka</span></a>
+                </span>
+            </span>
+
+          
+            <span id="/2017/08/25/spring-cloud/eureka/Spring-Cloud-Eureka-Server-Source/" class="post-meta-item leancloud_visitors" data-flag-title="Spring Cloud Eureka(四) 注册中心源码" title="阅读次数">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-eye"></i>
+              </span>
+              <span class="post-meta-item-text">阅读次数：</span>
+              <span class="leancloud-visitors-count"></span>
+            </span>
+  
+  <span class="post-meta-item">
+    
+      <span class="post-meta-item-icon">
+        <i class="far fa-comment"></i>
+      </span>
+      <span class="post-meta-item-text">Valine：</span>
+    
+    <a title="valine" href="/2017/08/25/spring-cloud/eureka/Spring-Cloud-Eureka-Server-Source/#valine-comments" itemprop="discussionUrl">
+      <span class="post-comments-count valine-comment-count" data-xid="/2017/08/25/spring-cloud/eureka/Spring-Cloud-Eureka-Server-Source/" itemprop="commentCount"></span>
+    </a>
+  </span>
+  
+  
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <p><img data-src="/images/spring-cloud/2017-08-25-eureka-logo-2627.png" alt="eureka-logo"></p>
+<p>[Spring Cloud Eureka]</p>
+<ul>
+<li><a href="/2017/08/24/spring-cloud/eureka/Spring-Cloud-Eureka-一/">Spring Cloud Eureka(一) 前身今世</a></li>
+<li><a href="/2017/08/24/spring-cloud/eureka/Spring-Cloud-Eureka-Properties/">Spring Cloud Eureka(二) 配置文件</a></li>
+<li><a href="/2017/08/24/spring-cloud/eureka/Spring-Cloud-Eureka-Server/">Spring Cloud Eureka(三) 注册中心</a></li>
+<li>Spring Cloud Eureka(四) 注册中心源码</li>
+<li><a href="/2017/08/25/spring-cloud/eureka/Spring-Cloud-Eureka-Client-Source/">Spring Cloud Eureka(五) 客户端源码</a></li>
+<li><a href="/2017/08/29/spring-cloud/eureka/Spring-Cloud-Eureka-Client-Register/">Spring Cloud Eureka(六) 服务注册</a></li>
+<li><a href="/2017/08/30/spring-cloud/eureka/Spring-Cloud-Eureka-Client-Heartbeat/">Spring Cloud Eureka(七) 服务续约</a></li>
+<li><a href="/2017/08/30/spring-cloud/eureka/Spring-Cloud-Eureka-Client-Cancel/">Spring Cloud Eureka(八) 服务下线</a></li>
+</ul>
+<blockquote>
+<p>本次spring-cloud-starter-eureka-server源码的版本为1.3.0</p>
+</blockquote>
+<a id="more"></a>
+
+<h2 id="spring-cloud-starter-eureka-server-目录结构"><a href="#spring-cloud-starter-eureka-server-目录结构" class="headerlink" title="spring-cloud-starter-eureka-server 目录结构"></a>spring-cloud-starter-eureka-server 目录结构</h2><figure class="highlight yml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br></pre></td><td class="code"><pre><span class="line"><span class="string">├──</span> <span class="string">pom.xml</span></span><br><span class="line"><span class="string">└──</span> <span class="string">src</span></span><br><span class="line">    <span class="string">├──</span> <span class="string">main</span></span><br><span class="line">    <span class="string">│</span>   <span class="string">├──</span> <span class="string">java</span></span><br><span class="line">    <span class="string">│</span>   <span class="string">│</span>   <span class="string">└──</span> <span class="string">org</span></span><br><span class="line">    <span class="string">│</span>   <span class="string">│</span>       <span class="string">└──</span> <span class="string">springframework</span></span><br><span class="line">    <span class="string">│</span>   <span class="string">│</span>           <span class="string">└──</span> <span class="string">cloud</span></span><br><span class="line">    <span class="string">│</span>   <span class="string">│</span>               <span class="string">└──</span> <span class="string">netflix</span></span><br><span class="line">    <span class="string">│</span>   <span class="string">│</span>                   <span class="string">└──</span> <span class="string">eureka</span></span><br><span class="line">    <span class="string">│</span>   <span class="string">│</span>                       <span class="string">└──</span> <span class="string">server</span></span><br><span class="line">    <span class="string">│</span>   <span class="string">│</span>                           <span class="string">├──</span> <span class="string">CloudJacksonJson.java</span></span><br><span class="line">    <span class="string">│</span>   <span class="string">│</span>                           <span class="string">├──</span> <span class="string">EnableEurekaServer.java</span></span><br><span class="line">    <span class="string">│</span>   <span class="string">│</span>                           <span class="string">├──</span> <span class="string">EurekaController.java</span></span><br><span class="line">    <span class="string">│</span>   <span class="string">│</span>                           <span class="string">├──</span> <span class="string">EurekaDashboardProperties.java</span></span><br><span class="line">    <span class="string">│</span>   <span class="string">│</span>                           <span class="string">├──</span> <span class="string">EurekaServerAutoConfiguration.java</span></span><br><span class="line">    <span class="string">│</span>   <span class="string">│</span>                           <span class="string">├──</span> <span class="string">EurekaServerBootstrap.java</span></span><br><span class="line">    <span class="string">│</span>   <span class="string">│</span>                           <span class="string">├──</span> <span class="string">EurekaServerConfigBean.java</span></span><br><span class="line">    <span class="string">│</span>   <span class="string">│</span>                           <span class="string">├──</span> <span class="string">EurekaServerInitializerConfiguration.java</span></span><br><span class="line">    <span class="string">│</span>   <span class="string">│</span>                           <span class="string">├──</span> <span class="string">EurekaServerMarkerConfiguration.java</span></span><br><span class="line">    <span class="string">│</span>   <span class="string">│</span>                           <span class="string">├──</span> <span class="string">InstanceRegistry.java</span></span><br><span class="line">    <span class="string">│</span>   <span class="string">│</span>                           <span class="string">├──</span> <span class="string">InstanceRegistryProperties.java</span></span><br><span class="line">    <span class="string">│</span>   <span class="string">│</span>                           <span class="string">└──</span> <span class="string">event</span></span><br><span class="line">    <span class="string">│</span>   <span class="string">│</span>                               <span class="string">├──</span> <span class="string">EurekaInstanceCanceledEvent.java</span></span><br><span class="line">    <span class="string">│</span>   <span class="string">│</span>                               <span class="string">├──</span> <span class="string">EurekaInstanceRegisteredEvent.java</span></span><br><span class="line">    <span class="string">│</span>   <span class="string">│</span>                               <span class="string">├──</span> <span class="string">EurekaInstanceRenewedEvent.java</span></span><br><span class="line">    <span class="string">│</span>   <span class="string">│</span>                               <span class="string">├──</span> <span class="string">EurekaRegistryAvailableEvent.java</span></span><br><span class="line">    <span class="string">│</span>   <span class="string">│</span>                               <span class="string">└──</span> <span class="string">EurekaServerStartedEvent.java</span></span><br><span class="line">    <span class="string">│</span>   <span class="string">├──</span> <span class="string">resources</span></span><br><span class="line">    <span class="string">│</span>   <span class="string">│</span>   <span class="string">├──</span> <span class="string">META-INF</span></span><br><span class="line">    <span class="string">│</span>   <span class="string">│</span>   <span class="string">│</span>   <span class="string">└──</span> <span class="string">spring.factories</span></span><br><span class="line">    <span class="string">│</span>   <span class="string">│</span>   <span class="string">├──</span> <span class="string">eureka</span></span><br><span class="line">    <span class="string">│</span>   <span class="string">│</span>   <span class="string">│</span>   <span class="string">└──</span> <span class="string">server.properties</span></span><br><span class="line">    <span class="string">│</span>   <span class="string">│</span>   <span class="string">├──</span> <span class="string">static</span></span><br><span class="line">    <span class="string">│</span>   <span class="string">│</span>   <span class="string">│</span>   <span class="string">└──</span> <span class="string">eureka</span></span><br><span class="line">    <span class="string">│</span>   <span class="string">│</span>   <span class="string">│</span>       <span class="string">├──</span> <span class="string">fonts</span></span><br><span class="line">    <span class="string">│</span>   <span class="string">│</span>   <span class="string">│</span>       <span class="string">│</span>   <span class="string">├──</span> <span class="string">montserrat-webfont.eot</span></span><br><span class="line">    <span class="string">│</span>   <span class="string">│</span>   <span class="string">│</span>       <span class="string">│</span>   <span class="string">├──</span> <span class="string">montserrat-webfont.svg</span></span><br><span class="line">    <span class="string">│</span>   <span class="string">│</span>   <span class="string">│</span>       <span class="string">│</span>   <span class="string">├──</span> <span class="string">montserrat-webfont.ttf</span></span><br><span class="line">    <span class="string">│</span>   <span class="string">│</span>   <span class="string">│</span>       <span class="string">│</span>   <span class="string">├──</span> <span class="string">montserrat-webfont.woff</span></span><br><span class="line">    <span class="string">│</span>   <span class="string">│</span>   <span class="string">│</span>       <span class="string">│</span>   <span class="string">├──</span> <span class="string">varela_round-webfont.eot</span></span><br><span class="line">    <span class="string">│</span>   <span class="string">│</span>   <span class="string">│</span>       <span class="string">│</span>   <span class="string">├──</span> <span class="string">varela_round-webfont.svg</span></span><br><span class="line">    <span class="string">│</span>   <span class="string">│</span>   <span class="string">│</span>       <span class="string">│</span>   <span class="string">├──</span> <span class="string">varela_round-webfont.ttf</span></span><br><span class="line">    <span class="string">│</span>   <span class="string">│</span>   <span class="string">│</span>       <span class="string">│</span>   <span class="string">└──</span> <span class="string">varela_round-webfont.woff</span></span><br><span class="line">    <span class="string">│</span>   <span class="string">│</span>   <span class="string">│</span>       <span class="string">└──</span> <span class="string">images</span></span><br><span class="line">    <span class="string">│</span>   <span class="string">│</span>   <span class="string">│</span>           <span class="string">├──</span> <span class="number">404</span><span class="string">-icon.png</span></span><br><span class="line">    <span class="string">│</span>   <span class="string">│</span>   <span class="string">│</span>           <span class="string">├──</span> <span class="string">homepage-bg.jpg</span></span><br><span class="line">    <span class="string">│</span>   <span class="string">│</span>   <span class="string">│</span>           <span class="string">├──</span> <span class="string">platform-bg.png</span></span><br><span class="line">    <span class="string">│</span>   <span class="string">│</span>   <span class="string">│</span>           <span class="string">├──</span> <span class="string">platform-spring-xd.png</span></span><br><span class="line">    <span class="string">│</span>   <span class="string">│</span>   <span class="string">│</span>           <span class="string">├──</span> <span class="string">spring-logo-eureka-mobile.png</span></span><br><span class="line">    <span class="string">│</span>   <span class="string">│</span>   <span class="string">│</span>           <span class="string">└──</span> <span class="string">spring-logo-eureka.png</span></span><br><span class="line">    <span class="string">│</span>   <span class="string">│</span>   <span class="string">└──</span> <span class="string">templates</span></span><br><span class="line">    <span class="string">│</span>   <span class="string">│</span>       <span class="string">└──</span> <span class="string">eureka</span></span><br><span class="line">    <span class="string">│</span>   <span class="string">│</span>           <span class="string">├──</span> <span class="string">header.ftl</span></span><br><span class="line">    <span class="string">│</span>   <span class="string">│</span>           <span class="string">├──</span> <span class="string">lastn.ftl</span></span><br><span class="line">    <span class="string">│</span>   <span class="string">│</span>           <span class="string">├──</span> <span class="string">navbar.ftl</span></span><br><span class="line">    <span class="string">│</span>   <span class="string">│</span>           <span class="string">└──</span> <span class="string">status.ftl</span></span><br><span class="line">    <span class="string">│</span>   <span class="string">└──</span> <span class="string">wro</span></span><br><span class="line">    <span class="string">│</span>       <span class="string">├──</span> <span class="string">header.less</span></span><br><span class="line">    <span class="string">│</span>       <span class="string">├──</span> <span class="string">main.less</span></span><br><span class="line">    <span class="string">│</span>       <span class="string">├──</span> <span class="string">responsive.less</span></span><br><span class="line">    <span class="string">│</span>       <span class="string">├──</span> <span class="string">typography.less</span></span><br><span class="line">    <span class="string">│</span>       <span class="string">├──</span> <span class="string">wro.properties</span></span><br><span class="line">    <span class="string">│</span>       <span class="string">└──</span> <span class="string">wro.xml</span></span><br><span class="line">    <span class="string">└──</span> <span class="string">test</span></span><br><span class="line">        <span class="string">├──</span> <span class="string">java</span></span><br><span class="line">        <span class="string">│</span>   <span class="string">└──</span> <span class="string">org</span></span><br><span class="line">        <span class="string">│</span>       <span class="string">└──</span> <span class="string">springframework</span></span><br><span class="line">        <span class="string">│</span>           <span class="string">└──</span> <span class="string">cloud</span></span><br><span class="line">        <span class="string">│</span>               <span class="string">└──</span> <span class="string">netflix</span></span><br><span class="line">        <span class="string">│</span>                   <span class="string">└──</span> <span class="string">eureka</span></span><br><span class="line">        <span class="string">│</span>                       <span class="string">└──</span> <span class="string">server</span></span><br><span class="line">        <span class="string">│</span>                           <span class="string">├──</span> <span class="string">ApplicationContextTests.java</span></span><br><span class="line">        <span class="string">│</span>                           <span class="string">├──</span> <span class="string">ApplicationDashboardDisabledTests.java</span></span><br><span class="line">        <span class="string">│</span>                           <span class="string">├──</span> <span class="string">ApplicationDashboardPathTests.java</span></span><br><span class="line">        <span class="string">│</span>                           <span class="string">├──</span> <span class="string">ApplicationServletPathTests.java</span></span><br><span class="line">        <span class="string">│</span>                           <span class="string">├──</span> <span class="string">ApplicationTests.java</span></span><br><span class="line">        <span class="string">│</span>                           <span class="string">├──</span> <span class="string">EurekaControllerReplicasTests.java</span></span><br><span class="line">        <span class="string">│</span>                           <span class="string">├──</span> <span class="string">EurekaControllerTests.java</span></span><br><span class="line">        <span class="string">│</span>                           <span class="string">├──</span> <span class="string">EurekaCustomPeerNodesTests.java</span></span><br><span class="line">        <span class="string">│</span>                           <span class="string">└──</span> <span class="string">InstanceRegistryTests.java</span></span><br><span class="line">        <span class="string">└──</span> <span class="string">resources</span></span><br><span class="line">            <span class="string">└──</span> <span class="string">application.properties</span></span><br></pre></td></tr></table></figure>
+
+<h2 id="spring-boot-starter-eureka-server启动分析"><a href="#spring-boot-starter-eureka-server启动分析" class="headerlink" title="spring-boot-starter-eureka-server启动分析"></a>spring-boot-starter-eureka-server启动分析</h2><p>在META-INF目录下有个spring.factories文件</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">org.springframework.boot.autoconfigure.EnableAutoConfiguration&#x3D;\</span><br><span class="line">  org.springframework.cloud.netflix.eureka.server.EurekaServerAutoConfiguration</span><br></pre></td></tr></table></figure>
+
+<p>spring-boot在启动过程中通过加载、解析spring.factories文件中的信息，对一些bean进行自动装配，在这里我们就不关注了<a href="">spring-boot 自动配置</a></p>
+<p>我们可以看到EurekaServerAutoConfiguration类由spring ioc来装配, 加载了EurekaServerInitializerConfiguration类<br>并且把eureka dashboard、register等配置属性注入到EurekaDashboardProperties和InstanceRegistryProperties类中</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Configuration</span></span><br><span class="line"><span class="meta">@Import</span>(EurekaServerInitializerConfiguration<span class="class">.<span class="keyword">class</span>)</span></span><br><span class="line"><span class="class">@<span class="title">ConditionalOnBean</span>(<span class="title">EurekaServerMarkerConfiguration</span>.<span class="title">Marker</span>.<span class="title">class</span>)</span></span><br><span class="line"><span class="class">@<span class="title">EnableConfigurationProperties</span>(</span>&#123; EurekaDashboardProperties<span class="class">.<span class="keyword">class</span>,</span></span><br><span class="line"><span class="class">		<span class="title">InstanceRegistryProperties</span>.<span class="title">class</span> &#125;)</span></span><br><span class="line">@PropertySource("classpath:/eureka/server.properties")</span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">EurekaServerAutoConfiguration</span> <span class="keyword">extends</span> <span class="title">WebMvcConfigurerAdapter</span> </span>&#123;</span><br><span class="line">    ......</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+
+<p>EurekaServerInitializerConfiguration 实现了SmartLifecycle接口的start方法，会在所有spring bean都初始化完成后调用该方法</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Configuration</span></span><br><span class="line"><span class="meta">@CommonsLog</span></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">EurekaServerInitializerConfiguration</span></span></span><br><span class="line"><span class="class">		<span class="keyword">implements</span> <span class="title">ServletContextAware</span>, <span class="title">SmartLifecycle</span>, <span class="title">Ordered</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">	...</span><br><span class="line"></span><br><span class="line">	<span class="meta">@Override</span></span><br><span class="line">	<span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">start</span><span class="params">()</span> </span>&#123;</span><br><span class="line">		<span class="keyword">new</span> Thread(<span class="keyword">new</span> Runnable() &#123;</span><br><span class="line">			<span class="meta">@Override</span></span><br><span class="line">			<span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">run</span><span class="params">()</span> </span>&#123;</span><br><span class="line">				<span class="keyword">try</span> &#123;</span><br><span class="line">					<span class="comment">//<span class="doctag">TODO:</span> is this class even needed now?</span></span><br><span class="line">					<span class="comment">// 初始化eureka server</span></span><br><span class="line">					eurekaServerBootstrap.contextInitialized(EurekaServerInitializerConfiguration.<span class="keyword">this</span>.servletContext);</span><br><span class="line">					log.info(<span class="string">"Started Eureka Server"</span>);</span><br><span class="line"></span><br><span class="line">                    <span class="comment">// 传递eureka注册事件，找来找去没看到有listen去处理这件事件</span></span><br><span class="line">                    <span class="comment">// spring包中没有去处理，如果我们有需要可以自己处理</span></span><br><span class="line">                    <span class="comment">// https://github.com/spring-cloud/spring-cloud-netflix/issues/1726</span></span><br><span class="line">					publish(<span class="keyword">new</span> EurekaRegistryAvailableEvent(getEurekaServerConfig()));</span><br><span class="line">					<span class="comment">// 设置在spring容器关闭的时候执行stop方法</span></span><br><span class="line">					EurekaServerInitializerConfiguration.<span class="keyword">this</span>.running = <span class="keyword">true</span>;</span><br><span class="line">					publish(<span class="keyword">new</span> EurekaServerStartedEvent(getEurekaServerConfig()));</span><br><span class="line">				&#125;</span><br><span class="line">				<span class="keyword">catch</span> (Exception ex) &#123;</span><br><span class="line">					<span class="comment">// Help!</span></span><br><span class="line">					log.error(<span class="string">"Could not initialize Eureka servlet context"</span>, ex);</span><br><span class="line">				&#125;</span><br><span class="line">			&#125;</span><br><span class="line">		&#125;).start();</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">    <span class="meta">@Bean</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> EurekaServerBootstrap <span class="title">eurekaServerBootstrap</span><span class="params">(PeerAwareInstanceRegistry registry,</span></span></span><br><span class="line"><span class="function"><span class="params">            EurekaServerContext serverContext)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">return</span> <span class="keyword">new</span> EurekaServerBootstrap(<span class="keyword">this</span>.applicationInfoManager,</span><br><span class="line">                <span class="keyword">this</span>.eurekaClientConfig, <span class="keyword">this</span>.eurekaServerConfig, registry,</span><br><span class="line">                serverContext);</span><br><span class="line">    &#125;</span><br><span class="line">	...</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>Eureka Config wiki: <a href="https://github.com/Netflix/eureka/wiki/Configuring-Eureka" target="_blank" rel="noopener">https://github.com/Netflix/eureka/wiki/Configuring-Eureka</a></p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@CommonsLog</span></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">EurekaServerBootstrap</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">    ....</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">contextInitialized</span><span class="params">(ServletContext context)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">try</span> &#123;</span><br><span class="line">            <span class="comment">//初始化eureka环境</span></span><br><span class="line">            initEurekaEnvironment();</span><br><span class="line">            <span class="comment">//初始化eureka上下文</span></span><br><span class="line">            initEurekaServerContext();</span><br><span class="line"></span><br><span class="line">            context.setAttribute(EurekaServerContext<span class="class">.<span class="keyword">class</span>.<span class="title">getName</span>(), <span class="title">this</span>.<span class="title">serverContext</span>)</span>;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">catch</span> (Throwable e) &#123;</span><br><span class="line">            log.error(<span class="string">"Cannot bootstrap eureka server :"</span>, e);</span><br><span class="line">            <span class="keyword">throw</span> <span class="keyword">new</span> RuntimeException(<span class="string">"Cannot bootstrap eureka server :"</span>, e);</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">protected</span> <span class="keyword">void</span> <span class="title">initEurekaEnvironment</span><span class="params">()</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">        log.info(<span class="string">"Setting the eureka configuration.."</span>);</span><br><span class="line"></span><br><span class="line">        <span class="comment">//如果在云环境中运行，需要传递java命令行属性-Deureka.datacenter = cloud，以便Eureka客户端/服务器知道初始化AWS云特定的信息</span></span><br><span class="line">        String dataCenter = ConfigurationManager.getConfigInstance()</span><br><span class="line">                .getString(EUREKA_DATACENTER);</span><br><span class="line">        <span class="keyword">if</span> (dataCenter == <span class="keyword">null</span>) &#123;</span><br><span class="line">            log.info(</span><br><span class="line">                    <span class="string">"Eureka data center value eureka.datacenter is not set, defaulting to default"</span>);</span><br><span class="line">            ConfigurationManager.getConfigInstance()</span><br><span class="line">                    .setProperty(ARCHAIUS_DEPLOYMENT_DATACENTER, DEFAULT);</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">else</span> &#123;</span><br><span class="line">            ConfigurationManager.getConfigInstance()</span><br><span class="line">                    .setProperty(ARCHAIUS_DEPLOYMENT_DATACENTER, dataCenter);</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        <span class="comment">//eureka 运行环境，java命令行属性-Deureka.environment=eureka-client-&#123;test，prod&#125;</span></span><br><span class="line">        String environment = ConfigurationManager.getConfigInstance()</span><br><span class="line">                .getString(EUREKA_ENVIRONMENT);</span><br><span class="line">        <span class="keyword">if</span> (environment == <span class="keyword">null</span>) &#123;</span><br><span class="line">            ConfigurationManager.getConfigInstance()</span><br><span class="line">                    .setProperty(ARCHAIUS_DEPLOYMENT_ENVIRONMENT, TEST);</span><br><span class="line">            log.info(</span><br><span class="line">                    <span class="string">"Eureka environment value eureka.environment is not set, defaulting to test"</span>);</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">else</span> &#123;</span><br><span class="line">            ConfigurationManager.getConfigInstance()</span><br><span class="line">                    .setProperty(ARCHAIUS_DEPLOYMENT_ENVIRONMENT, environment);</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="comment">// eureka使用XStream来对json、xml格式的转换</span></span><br><span class="line">    <span class="function"><span class="keyword">protected</span> <span class="keyword">void</span> <span class="title">initEurekaServerContext</span><span class="params">()</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">        <span class="comment">// 向后兼容</span></span><br><span class="line">        <span class="comment">//注册状态转换器</span></span><br><span class="line">        JsonXStream.getInstance().registerConverter(<span class="keyword">new</span> V1AwareInstanceInfoConverter(),</span><br><span class="line">                XStream.PRIORITY_VERY_HIGH);</span><br><span class="line">        XmlXStream.getInstance().registerConverter(<span class="keyword">new</span> V1AwareInstanceInfoConverter(),</span><br><span class="line">                XStream.PRIORITY_VERY_HIGH);</span><br><span class="line"></span><br><span class="line">        <span class="comment">//判断是否亚马逊的数据中心</span></span><br><span class="line">        <span class="keyword">if</span> (isAws(<span class="keyword">this</span>.applicationInfoManager.getInfo())) &#123;</span><br><span class="line">            <span class="keyword">this</span>.awsBinder = <span class="keyword">new</span> AwsBinderDelegate(<span class="keyword">this</span>.eurekaServerConfig,</span><br><span class="line">                    <span class="keyword">this</span>.eurekaClientConfig, <span class="keyword">this</span>.registry, <span class="keyword">this</span>.applicationInfoManager);</span><br><span class="line">            <span class="comment">//</span></span><br><span class="line">            <span class="keyword">this</span>.awsBinder.start();</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        <span class="comment">//初始化eureka server上下文</span></span><br><span class="line">        EurekaServerContextHolder.initialize(<span class="keyword">this</span>.serverContext);</span><br><span class="line"></span><br><span class="line">        log.info(<span class="string">"Initialized server context"</span>);</span><br><span class="line"></span><br><span class="line">        <span class="comment">// 从相邻的eureka节点复制注册表</span></span><br><span class="line">        <span class="keyword">int</span> registryCount = <span class="keyword">this</span>.registry.syncUp();</span><br><span class="line">        <span class="comment">// 默认每30秒发送心跳，1分钟就是2次</span></span><br><span class="line">        <span class="comment">// 修改eureka状态为up</span></span><br><span class="line">        <span class="keyword">this</span>.registry.openForTraffic(<span class="keyword">this</span>.applicationInfoManager, registryCount);</span><br><span class="line"></span><br><span class="line">        <span class="comment">// 注册所有监控</span></span><br><span class="line">        EurekaMonitors.registerAllStats();</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    ...</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Override</span></span><br><span class="line"><span class="comment">// 同步注册表</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">int</span> <span class="title">syncUp</span><span class="params">()</span> </span>&#123;</span><br><span class="line">    <span class="comment">// Copy entire entry from neighboring DS node</span></span><br><span class="line">    <span class="keyword">int</span> count = <span class="number">0</span>;</span><br><span class="line"></span><br><span class="line">    <span class="comment">// 需要设置 eureka.client.registerWithEureka=true</span></span><br><span class="line">    <span class="comment">// 默认5次, 可以通过eureka.server.registry-sync-retries属性来设置</span></span><br><span class="line">    <span class="keyword">for</span> (<span class="keyword">int</span> i = <span class="number">0</span>; ((i &lt; serverConfig.getRegistrySyncRetries()) &amp;&amp; (count == <span class="number">0</span>)); i++) &#123;</span><br><span class="line">        <span class="keyword">if</span> (i &gt; <span class="number">0</span>) &#123;</span><br><span class="line">            <span class="keyword">try</span> &#123;</span><br><span class="line">                Thread.sleep(serverConfig.getRegistrySyncRetryWaitMs());</span><br><span class="line">            &#125; <span class="keyword">catch</span> (InterruptedException e) &#123;</span><br><span class="line">                logger.warn(<span class="string">"Interrupted during registry transfer.."</span>);</span><br><span class="line">                <span class="keyword">break</span>;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">        Applications apps = eurekaClient.getApplications();</span><br><span class="line">        <span class="keyword">for</span> (Application app : apps.getRegisteredApplications()) &#123;</span><br><span class="line">            <span class="keyword">for</span> (InstanceInfo instance : app.getInstances()) &#123;</span><br><span class="line">                <span class="keyword">try</span> &#123;</span><br><span class="line">                    <span class="keyword">if</span> (isRegisterable(instance)) &#123;</span><br><span class="line">                        register(instance, instance.getLeaseInfo().getDurationInSecs(), <span class="keyword">true</span>);</span><br><span class="line">                        count++;</span><br><span class="line">                    &#125;</span><br><span class="line">                &#125; <span class="keyword">catch</span> (Throwable t) &#123;</span><br><span class="line">                    logger.error(<span class="string">"During DS init copy"</span>, t);</span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">return</span> count;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h2 id="事件处理"><a href="#事件处理" class="headerlink" title="事件处理"></a>事件处理</h2><p>Spring Cloud Netflix Eureka Server中提供了5个事件通知类</p>
+<ul>
+<li>EurekaInstanceCanceledEvent 服务下线事件</li>
+<li>EurekaInstanceRegisteredEvent 服务注册事件</li>
+<li>EurekaInstanceRenewedEvent 服务续约事件</li>
+<li>EurekaRegistryAvailableEvent Eureka注册中心启动事件</li>
+<li>EurekaServerStartedEvent Eureka Server启动事件</li>
+</ul>
+<p>我可以实现listen去处理这些动作</p>
+
+    </div>
+
+    
+    
+    
+        
+
+<div>
+<ul class="post-copyright">
+  <li class="post-copyright-author">
+    <strong>本文作者： </strong>tookbra
+  </li>
+  <li class="post-copyright-link">
+    <strong>本文链接：</strong>
+    <a href="https://okboom.org/2017/08/25/spring-cloud/eureka/Spring-Cloud-Eureka-Server-Source/" title="Spring Cloud Eureka(四) 注册中心源码">https://okboom.org/2017/08/25/spring-cloud/eureka/Spring-Cloud-Eureka-Server-Source/</a>
+  </li>
+  <li class="post-copyright-license">
+    <strong>版权声明： </strong>本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" rel="noopener" target="_blank"><i class="fab fa-fw fa-creative-commons"></i>BY-NC-SA</a> 许可协议。转载请注明出处！
+  </li>
+</ul>
+</div>
+
+
+      <footer class="post-footer">
+          
+          <div class="post-tags">
+              <a href="/tags/eureka/" rel="tag"><i class="fa fa-tag"></i> eureka</a>
+          </div>
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2017/08/24/spring-cloud/eureka/Spring-Cloud-Eureka-Server/" rel="prev" title="Spring Cloud Eureka(三) 注册中心">
+      <i class="fa fa-chevron-left"></i> Spring Cloud Eureka(三) 注册中心
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/2017/08/25/spring-cloud/eureka/Spring-Cloud-Eureka-Client-Source/" rel="next" title="Spring Cloud Eureka(五) 客户端源码">
+      Spring Cloud Eureka(五) 客户端源码 <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+    <div class="comments" id="valine-comments"></div>
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#spring-cloud-starter-eureka-server-目录结构"><span class="nav-number">1.</span> <span class="nav-text">spring-cloud-starter-eureka-server 目录结构</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#spring-boot-starter-eureka-server启动分析"><span class="nav-number">2.</span> <span class="nav-text">spring-boot-starter-eureka-server启动分析</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#事件处理"><span class="nav-number">3.</span> <span class="nav-text">事件处理</span></a></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="tookbra"
+      src="/images/logo.png">
+  <p class="site-author-name" itemprop="name">tookbra</p>
+  <div class="site-description" itemprop="description">Spring Cloud, Dubbo, Netty, 物联网, Java, 中间件</div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives">
+          <span class="site-state-item-count">38</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+        <span class="site-state-item-count">11</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+        <span class="site-state-item-count">14</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author motion-element">
+      <span class="links-of-author-item">
+        <a href="https://github.com/tookbra" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;tookbra" rel="noopener" target="_blank"><i class="fab fa-github fa-fw"></i></a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:tookbra@gmail.com" title="E-Mail → mailto:tookbra@gmail.com" rel="noopener" target="_blank"><i class="fa fa-envelope fa-fw"></i></a>
+      </span>
+  </div>
+  <div class="cc-license motion-element" itemprop="license">
+    <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" class="cc-opacity" rel="noopener" target="_blank"><img src="/images/cc-by-nc-sa.svg" alt="Creative Commons"></a>
+  </div>
+
+
+
+      </div>
+        <div class="back-to-top motion-element">
+          <i class="fa fa-arrow-up"></i>
+          <span>0%</span>
+        </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+
+<div class="copyright">
+  
+  &copy; 2017 – 
+  <span itemprop="copyrightYear">2021</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">tookbra</span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Gemini</a> 强力驱动
+  </div>
+
+        
+
+
+
+
+
+
+<script data-pjax>
+  (function() {
+    function leancloudSelector(url) {
+      url = encodeURI(url);
+      return document.getElementById(url).querySelector('.leancloud-visitors-count');
+    }
+
+    function addCount(Counter) {
+      var visitors = document.querySelector('.leancloud_visitors');
+      var url = decodeURI(visitors.id);
+      var title = visitors.dataset.flagTitle;
+
+      Counter('get', '/classes/Counter?where=' + encodeURIComponent(JSON.stringify({ url })))
+        .then(response => response.json())
+        .then(({ results }) => {
+          if (results.length > 0) {
+            var counter = results[0];
+            leancloudSelector(url).innerText = counter.time + 1;
+            Counter('put', '/classes/Counter/' + counter.objectId, { time: { '__op': 'Increment', 'amount': 1 } })
+              .catch(error => {
+                console.error('Failed to save visitor count', error);
+              });
+          } else {
+              leancloudSelector(url).innerText = 'Counter not initialized! More info at console err msg.';
+              console.error('ATTENTION! LeanCloud counter has security bug, see how to solve it here: https://github.com/theme-next/hexo-leancloud-counter-security. \n However, you can still use LeanCloud without security, by setting `security` option to `false`.');
+            
+          }
+        })
+        .catch(error => {
+          console.error('LeanCloud Counter Error', error);
+        });
+    }
+
+    function showTime(Counter) {
+      var visitors = document.querySelectorAll('.leancloud_visitors');
+      var entries = [...visitors].map(element => {
+        return decodeURI(element.id);
+      });
+
+      Counter('get', '/classes/Counter?where=' + encodeURIComponent(JSON.stringify({ url: { '$in': entries } })))
+        .then(response => response.json())
+        .then(({ results }) => {
+          for (let url of entries) {
+            let target = results.find(item => item.url === url);
+            leancloudSelector(url).innerText = target ? target.time : 0;
+          }
+        })
+        .catch(error => {
+          console.error('LeanCloud Counter Error', error);
+        });
+    }
+
+    let { app_id, app_key, server_url } = {"enable":true,"app_id":"uJIVXaXi09cKMc5dgb90kxxM-gzGzoHsz","app_key":"yf8wJTDY78HMHMgsz92ReKgm","server_url":null,"security":true};
+    function fetchData(api_server) {
+      var Counter = (method, url, data) => {
+        return fetch(`${api_server}/1.1${url}`, {
+          method,
+          headers: {
+            'X-LC-Id'     : app_id,
+            'X-LC-Key'    : app_key,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(data)
+        });
+      };
+      if (CONFIG.page.isPost) {
+        if (CONFIG.hostname !== location.hostname) return;
+        addCount(Counter);
+      } else if (document.querySelectorAll('.post-title-link').length >= 1) {
+        showTime(Counter);
+      }
+    }
+
+    let api_server = app_id.slice(-9) !== '-MdYXbMMI' ? server_url : `https://${app_id.slice(0, 8).toLowerCase()}.api.lncldglobal.com`;
+
+    if (api_server) {
+      fetchData(api_server);
+    } else {
+      fetch('https://app-router.leancloud.cn/2/route?appId=' + app_id)
+        .then(response => response.json())
+        .then(({ api_server }) => {
+          fetchData('https://' + api_server);
+        });
+    }
+  })();
+</script>
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="//cdn.jsdelivr.net/gh/theme-next/theme-next-pjax@0/pjax.min.js"></script>
+  <script src="//cdn.jsdelivr.net/npm/jquery@3/dist/jquery.min.js"></script>
+  <script src="//cdn.jsdelivr.net/gh/fancyapps/fancybox@3/dist/jquery.fancybox.min.js"></script>
+  <script src="//cdn.jsdelivr.net/npm/medium-zoom@1/dist/medium-zoom.min.js"></script>
+  <script src="//cdn.jsdelivr.net/npm/lozad@1/dist/lozad.min.js"></script>
+  <script src="//cdn.jsdelivr.net/npm/pangu@4/dist/browser/pangu.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/pisces.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+  <script>
+var pjax = new Pjax({
+  selectors: [
+    'head title',
+    '#page-configurations',
+    '.content-wrap',
+    '.post-toc-wrap',
+    '.languages',
+    '#pjax'
+  ],
+  switches: {
+    '.post-toc-wrap': Pjax.switches.innerHTML
+  },
+  analytics: false,
+  cacheBust: false,
+  scrollTo : !CONFIG.bookmark.enable
+});
+
+window.addEventListener('pjax:success', () => {
+  document.querySelectorAll('script[data-pjax], script#page-configurations, #pjax script').forEach(element => {
+    var code = element.text || element.textContent || element.innerHTML || '';
+    var parent = element.parentNode;
+    parent.removeChild(element);
+    var script = document.createElement('script');
+    if (element.id) {
+      script.id = element.id;
+    }
+    if (element.className) {
+      script.className = element.className;
+    }
+    if (element.type) {
+      script.type = element.type;
+    }
+    if (element.src) {
+      script.src = element.src;
+      // Force synchronous loading of peripheral JS.
+      script.async = false;
+    }
+    if (element.dataset.pjax !== undefined) {
+      script.dataset.pjax = '';
+    }
+    if (code !== '') {
+      script.appendChild(document.createTextNode(code));
+    }
+    parent.appendChild(script);
+  });
+  NexT.boot.refresh();
+  // Define Motion Sequence & Bootstrap Motion.
+  if (CONFIG.motion.enable) {
+    NexT.motion.integrator
+      .init()
+      .add(NexT.motion.middleWares.subMenu)
+      .add(NexT.motion.middleWares.postList)
+      .bootstrap();
+  }
+  NexT.utils.updateSidebarPosition();
+});
+</script>
+
+
+
+
+  
+  <script data-pjax>
+    (function(){
+      var bp = document.createElement('script');
+      var curProtocol = window.location.protocol.split(':')[0];
+      bp.src = (curProtocol === 'https') ? 'https://zz.bdstatic.com/linksubmit/push.js' : 'http://push.zhanzhang.baidu.com/push.js';
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(bp, s);
+    })();
+  </script>
+
+
+
+
+
+
+
+
+
+
+
+<script data-pjax>
+document.querySelectorAll('.pdfobject-container').forEach(element => {
+  let url = element.dataset.target;
+  let pdfOpenParams = {
+    navpanes : 0,
+    toolbar  : 0,
+    statusbar: 0,
+    pagemode : 'thumbs',
+    view     : 'FitH'
+  };
+  let pdfOpenFragment = '#' + Object.entries(pdfOpenParams).map(([key, value]) => `${key}=${encodeURIComponent(value)}`).join('&');
+  let fullURL = `/lib/pdf/web/viewer.html?file=${encodeURIComponent(url)}${pdfOpenFragment}`;
+
+  if (NexT.utils.supportsPDFs()) {
+    element.innerHTML = `<embed class="pdfobject" src="${url + pdfOpenFragment}" type="application/pdf" style="height: ${element.dataset.height};">`;
+  } else {
+    element.innerHTML = `<iframe src="${fullURL}" style="height: ${element.dataset.height};" frameborder="0"></iframe>`;
+  }
+});
+</script>
+
+
+<script data-pjax>
+if (document.querySelectorAll('pre.mermaid').length) {
+  NexT.utils.getScript('//cdn.jsdelivr.net/npm/mermaid@8/dist/mermaid.min.js', () => {
+    mermaid.initialize({
+      theme    : 'forest',
+      logLevel : 3,
+      flowchart: { curve     : 'linear' },
+      gantt    : { axisFormat: '%m/%d/%Y' },
+      sequence : { actorMargin: 50 }
+    });
+  }, window.mermaid);
+}
+</script>
+
+
+    <div id="pjax">
+  
+
+  
+
+  
+
+
+<script>
+NexT.utils.loadComments(document.querySelector('#valine-comments'), () => {
+  NexT.utils.getScript('//unpkg.com/valine/dist/Valine.min.js', () => {
+    var GUEST = ['nick', 'mail', 'link'];
+    var guest = 'nick,mail,link';
+    guest = guest.split(',').filter(item => {
+      return GUEST.includes(item);
+    });
+    new Valine({
+      el         : '#valine-comments',
+      verify     : false,
+      notify     : false,
+      appId      : 'uJIVXaXi09cKMc5dgb90kxxM-gzGzoHsz',
+      appKey     : 'yf8wJTDY78HMHMgsz92ReKgm',
+      placeholder: "欢迎留言",
+      avatar     : 'mm',
+      meta       : guest,
+      pageSize   : '10' || 10,
+      visitor    : false,
+      lang       : '' || 'zh-cn',
+      path       : location.pathname,
+      recordIP   : false,
+      serverURLs : ''
+    });
+  }, window.Valine);
+});
+</script>
+
+    </div>
+  <script src="/live2d-widget/autoload.js"></script>
+</body>
+</html>

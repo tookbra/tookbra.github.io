@@ -1,0 +1,1341 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 4.2.1">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/logo.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/logo.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/logo.png">
+  <link rel="mask-icon" href="/images/logo.png" color="#222">
+  <meta http-equiv="Cache-Control" content="no-transform">
+  <meta http-equiv="Cache-Control" content="no-siteapp">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+  <link rel="stylesheet" href="//cdn.jsdelivr.net/gh/fancyapps/fancybox@3/dist/jquery.fancybox.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"okboom.org","root":"/","scheme":"Gemini","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":true},"copycode":{"enable":true,"show_result":true,"style":null},"back2top":{"enable":true,"sidebar":true,"scrollpercent":true},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":true,"mediumzoom":true,"lazyload":true,"pangu":true,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":true,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":false,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":true,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}}};
+  </script>
+
+  <meta name="description" content="[Spring Cloud Eureka]  Spring Cloud Eureka(一) 前身今世 Spring Cloud Eureka(二) 配置文件 Spring Cloud Eureka(三) 注册中心 Spring Cloud Eureka(四) 注册中心源码 Spring Cloud Eureka(五) 客户端源码 Spring Cloud Eureka(六) 服务注册 Sprin">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Spring Cloud Eureka(二) 配置文件">
+<meta property="og:url" content="https://okboom.org/2017/08/24/spring-cloud/eureka/Spring-Cloud-Eureka-Properties/index.html">
+<meta property="og:site_name" content="Ok Boom">
+<meta property="og:description" content="[Spring Cloud Eureka]  Spring Cloud Eureka(一) 前身今世 Spring Cloud Eureka(二) 配置文件 Spring Cloud Eureka(三) 注册中心 Spring Cloud Eureka(四) 注册中心源码 Spring Cloud Eureka(五) 客户端源码 Spring Cloud Eureka(六) 服务注册 Sprin">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://okboom.org/images/spring-cloud/2017-08-25-eureka-logo-2627.png">
+<meta property="article:published_time" content="2017-08-24T06:21:21.000Z">
+<meta property="article:modified_time" content="2021-06-14T17:04:44.737Z">
+<meta property="article:author" content="tookbra">
+<meta property="article:tag" content="eureka">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://okboom.org/images/spring-cloud/2017-08-25-eureka-logo-2627.png">
+
+<link rel="canonical" href="https://okboom.org/2017/08/24/spring-cloud/eureka/Spring-Cloud-Eureka-Properties/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'zh-CN'
+  };
+</script>
+
+  <title>Spring Cloud Eureka(二) 配置文件 | Ok Boom</title>
+  
+    <script async src="https://www.googletagmanager.com/gtag/js?id=UA-105698309-2"></script>
+    <script data-pjax>
+      if (CONFIG.hostname === location.hostname) {
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
+        gtag('config', 'UA-105698309-2');
+      }
+    </script>
+
+
+  <script data-pjax>
+    var _hmt = _hmt || [];
+    (function() {
+      var hm = document.createElement("script");
+      hm.src = "https://hm.baidu.com/hm.js?bba0be0bae0736b339e0df8f68b295f8";
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(hm, s);
+    })();
+  </script>
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">Ok Boom</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+      <p class="site-subtitle" itemprop="description">”勿忘初心，方得始终“</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-主页">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>主页</a>
+
+  </li>
+        <li class="menu-item menu-item-标签">
+
+    <a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a>
+
+  </li>
+        <li class="menu-item menu-item-分类">
+
+    <a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类</a>
+
+  </li>
+        <li class="menu-item menu-item-归档">
+
+    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a>
+
+  </li>
+        <li class="menu-item menu-item-关于">
+
+    <a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>关于</a>
+
+  </li>
+  </ul>
+</nav>
+
+
+
+
+</div>
+    </header>
+
+    
+  <div class="reading-progress-bar"></div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://okboom.org/2017/08/24/spring-cloud/eureka/Spring-Cloud-Eureka-Properties/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/logo.png">
+      <meta itemprop="name" content="tookbra">
+      <meta itemprop="description" content="Spring Cloud, Dubbo, Netty, 物联网, Java, 中间件">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Ok Boom">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          Spring Cloud Eureka(二) 配置文件
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2017-08-24 14:21:21" itemprop="dateCreated datePublished" datetime="2017-08-24T14:21:21+08:00">2017-08-24</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2021-06-15 01:04:44" itemprop="dateModified" datetime="2021-06-15T01:04:44+08:00">2021-06-15</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/eureka/" itemprop="url" rel="index"><span itemprop="name">eureka</span></a>
+                </span>
+            </span>
+
+          
+            <span id="/2017/08/24/spring-cloud/eureka/Spring-Cloud-Eureka-Properties/" class="post-meta-item leancloud_visitors" data-flag-title="Spring Cloud Eureka(二) 配置文件" title="阅读次数">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-eye"></i>
+              </span>
+              <span class="post-meta-item-text">阅读次数：</span>
+              <span class="leancloud-visitors-count"></span>
+            </span>
+  
+  <span class="post-meta-item">
+    
+      <span class="post-meta-item-icon">
+        <i class="far fa-comment"></i>
+      </span>
+      <span class="post-meta-item-text">Valine：</span>
+    
+    <a title="valine" href="/2017/08/24/spring-cloud/eureka/Spring-Cloud-Eureka-Properties/#valine-comments" itemprop="discussionUrl">
+      <span class="post-comments-count valine-comment-count" data-xid="/2017/08/24/spring-cloud/eureka/Spring-Cloud-Eureka-Properties/" itemprop="commentCount"></span>
+    </a>
+  </span>
+  
+  
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <p><img data-src="/images/spring-cloud/2017-08-25-eureka-logo-2627.png" alt="eureka-logo"></p>
+<p>[Spring Cloud Eureka]</p>
+<ul>
+<li><a href="/2017/08/24/spring-cloud/eureka/Spring-Cloud-Eureka-一/">Spring Cloud Eureka(一) 前身今世</a></li>
+<li>Spring Cloud Eureka(二) 配置文件</li>
+<li><a href="/2017/08/24/spring-cloud/eureka/Spring-Cloud-Eureka-Server/">Spring Cloud Eureka(三) 注册中心</a></li>
+<li><a href="/2017/08/25/spring-cloud/eureka/Spring-Cloud-Eureka-Server-Source/">Spring Cloud Eureka(四) 注册中心源码</a></li>
+<li><a href="/2017/08/25/spring-cloud/eureka/Spring-Cloud-Eureka-Client-Source/">Spring Cloud Eureka(五) 客户端源码</a></li>
+<li><a href="/2017/08/29/spring-cloud/eureka/Spring-Cloud-Eureka-Client-Register/">Spring Cloud Eureka(六) 服务注册</a></li>
+<li><a href="/2017/08/30/spring-cloud/eureka/Spring-Cloud-Eureka-Client-Heartbeat/">Spring Cloud Eureka(七) 服务续约</a></li>
+<li><a href="/2017/08/30/spring-cloud/eureka/Spring-Cloud-Eureka-Client-Cancel/">Spring Cloud Eureka(八) 服务下线</a></li>
+</ul>
+<a id="more"></a>
+
+<p>eureka属性可以在spring-cloud-netflix-eureka-server和spring-cloud-netflix-eureka中META-INF文件夹下的spring-configuration-metadata.json中找到</p>
+<h3 id="Eureka-Instance"><a href="#Eureka-Instance" class="headerlink" title="Eureka Instance"></a>Eureka Instance</h3><table>
+<thead>
+<tr>
+<th align="left">element</th>
+<th>description</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="left">appname</td>
+<td>注册到eureka的应用名称</td>
+</tr>
+<tr>
+<td align="left">app-group-name</td>
+<td>注册到eureka的应用组</td>
+</tr>
+<tr>
+<td align="left">nonSecurePort</td>
+<td>如果设置了eureka.instance.non-secure-port通信端口，那么会优先于server.port</td>
+</tr>
+<tr>
+<td align="left">securePort</td>
+<td>加密端口</td>
+</tr>
+<tr>
+<td align="left">nonSecurePortEnabled</td>
+<td>是否启动非加密端口进行通信，默认开启</td>
+</tr>
+<tr>
+<td align="left">securePortEnabled</td>
+<td>是否启动加密端口进行通信，默认关闭</td>
+</tr>
+<tr>
+<td align="left">leaseRenewalIntervalInSeconds</td>
+<td>客户端发送心跳频率，默认30s</td>
+</tr>
+<tr>
+<td align="left">leaseExpirationDurationInSeconds</td>
+<td>服务端接收心跳后等待时间, 如果超过这个时间没有收到心跳则踢除此节点，默认90秒</td>
+</tr>
+<tr>
+<td align="left">virtualHostName</td>
+<td>虚拟主机名</td>
+</tr>
+<tr>
+<td align="left">instanceId</td>
+<td>全局唯一ID</td>
+</tr>
+<tr>
+<td align="left">secureVirtualHostName</td>
+<td>安全虚拟主机名</td>
+</tr>
+<tr>
+<td align="left">ipAddress</td>
+<td>ip地址</td>
+</tr>
+<tr>
+<td align="left">statusPageUrlPath</td>
+<td>状态路径</td>
+</tr>
+<tr>
+<td align="left">statusPageUrl</td>
+<td>优先于statusPageUrlPath</td>
+</tr>
+<tr>
+<td align="left">homePageUrlPath</td>
+<td>首页，默认／</td>
+</tr>
+<tr>
+<td align="left">homePageUrl</td>
+<td>优先于homePageUrlPath</td>
+</tr>
+<tr>
+<td align="left">healthCheckUrlPath</td>
+<td>健康检查路径</td>
+</tr>
+<tr>
+<td align="left">healthCheckUrl</td>
+<td>优先于healthCheckUrlPath</td>
+</tr>
+<tr>
+<td align="left">secureHealthCheckUrl</td>
+<td></td>
+</tr>
+<tr>
+<td align="left">namespace</td>
+<td>命名空间，在Spring Cloud被忽略，默认eureka</td>
+</tr>
+<tr>
+<td align="left">hostname</td>
+<td>主机名称</td>
+</tr>
+<tr>
+<td align="left">preferIpAddress</td>
+<td>ipAddress优先，默认false</td>
+</tr>
+<tr>
+<td align="left">initial-status</td>
+<td>初始化状态(UP、DOWN、STARTING、OUT_OF_SERVICE、UNKNOW)</td>
+</tr>
+<tr>
+<td align="left">default-address-resolution-order</td>
+<td></td>
+</tr>
+</tbody></table>
+<h3 id="Eureka-Server"><a href="#Eureka-Server" class="headerlink" title="Eureka Server"></a>Eureka Server</h3><table>
+<thead>
+<tr>
+<th align="left">element</th>
+<th>description</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="left">a-s-g-cache-expiry-timeout-ms</td>
+<td>缓存的到期时间，默认600000毫秒</td>
+</tr>
+<tr>
+<td align="left">a-s-g-query-timeout-ms</td>
+<td>查询aws信息超时时间，默认300毫秒</td>
+</tr>
+<tr>
+<td align="left">a-s-g-update-interval-ms</td>
+<td>从aws查询asg信息间隔时间，默认30000毫秒</td>
+</tr>
+<tr>
+<td align="left">a-w-s-access-id</td>
+<td>aws access-id</td>
+</tr>
+<tr>
+<td align="left">a-w-s-secret-key</td>
+<td>aws secret-ky</td>
+</tr>
+<tr>
+<td align="left">batch-replication</td>
+<td>是否开启批量复制，默认关闭</td>
+</tr>
+<tr>
+<td align="left">binding-strategy</td>
+<td>配置绑定，AwsBindingStrategy</td>
+</tr>
+<tr>
+<td align="left">delta-retention-timer-interval-in-ms</td>
+<td></td>
+</tr>
+<tr>
+<td align="left">disable-delta</td>
+<td></td>
+</tr>
+<tr>
+<td align="left">disable-delta-for-remote-regions</td>
+<td></td>
+</tr>
+<tr>
+<td align="left">disable-transparent-fallback-to-other-region</td>
+<td></td>
+</tr>
+<tr>
+<td align="left">e-i-p-bind-rebind-retries</td>
+<td></td>
+</tr>
+<tr>
+<td align="left">e-i-p-binding-retry-interval-ms</td>
+<td></td>
+</tr>
+<tr>
+<td align="left">e-i-p-binding-retry-interval-ms-when-unbound</td>
+<td></td>
+</tr>
+<tr>
+<td align="left">enable-replicated-request-compression</td>
+<td>是否开启请求数据压缩，默认关闭</td>
+</tr>
+<tr>
+<td align="left">enable-self-preservation</td>
+<td>是否开启自我bao保护，默认开启</td>
+</tr>
+<tr>
+<td align="left">eviction-interval-timer-in-ms</td>
+<td>续期时间，即扫描失效服务的间隔时间（缺省为60*1000ms）</td>
+</tr>
+<tr>
+<td align="left">g-zip-content-from-remote-region</td>
+<td>是否开启gzip压缩，默认开启</td>
+</tr>
+<tr>
+<td align="left">json-codec-name</td>
+<td>json编解码器类名，默认Jackson</td>
+</tr>
+<tr>
+<td align="left">list-auto-scaling-groups-role-name</td>
+<td></td>
+</tr>
+<tr>
+<td align="left">log-identity-headers</td>
+<td>是否开启认证头，默认开启</td>
+</tr>
+<tr>
+<td align="left">max-elements-in-peer-replication-pool</td>
+<td>节点复制任务最大数量，默认1000</td>
+</tr>
+<tr>
+<td align="left">max-elements-in-status-replication-pool</td>
+<td>节点状态复制任务最大数量，默认1000</td>
+</tr>
+<tr>
+<td align="left">max-idle-thread-age-in-minutes-for-peer-replication</td>
+<td>节点复制线程可以存活的空闲时间，默认15分钟</td>
+</tr>
+<tr>
+<td align="left">max-idle-thread-in-minutes-age-for-status-replication</td>
+<td>状态复制线程可以存活的空闲时间，默认10分钟</td>
+</tr>
+<tr>
+<td align="left">max-threads-for-peer-replication</td>
+<td>节点复制线程最大数量，默认20</td>
+</tr>
+<tr>
+<td align="left">max-threads-for-status-replication</td>
+<td>状态复制线程最大数量，默认1</td>
+</tr>
+<tr>
+<td align="left">max-time-for-replication</td>
+<td>复制任务最大过期时间，默认30000毫秒</td>
+</tr>
+<tr>
+<td align="left">min-available-instances-for-peer-replication</td>
+<td>判断健康状态最小节点数量，默认-1，这样永远为true</td>
+</tr>
+<tr>
+<td align="left">min-threads-for-peer-replication</td>
+<td>最小节点复制线程数量，默认5</td>
+</tr>
+<tr>
+<td align="left">min-threads-for-status-replication</td>
+<td>最小状态复制线程数量，默认1</td>
+</tr>
+<tr>
+<td align="left">number-of-replication-retries</td>
+<td>复制重试次数，默认5次</td>
+</tr>
+<tr>
+<td align="left">peer-eureka-nodes-update-interval-ms</td>
+<td>节点更新 定时任务initialDelay、 period值，默600000毫秒</td>
+</tr>
+<tr>
+<td align="left">peer-eureka-status-refresh-time-interval-ms</td>
+<td>状态更新 定时任务initialDelay、 period值，默3000毫秒</td>
+</tr>
+<tr>
+<td align="left">peer-node-connect-timeout-ms</td>
+<td>节点请求超时时间，默认200毫秒</td>
+</tr>
+<tr>
+<td align="left">peer-node-connection-idle-timeout-seconds</td>
+<td>节点请求空闲时间，默认30毫秒</td>
+</tr>
+<tr>
+<td align="left">peer-node-read-timeout-ms</td>
+<td>节点请求读超时时间，默认200毫秒</td>
+</tr>
+<tr>
+<td align="left">peer-node-total-connections</td>
+<td>节点请求连接池最大连接数，默认1000</td>
+</tr>
+<tr>
+<td align="left">peer-node-total-connections-per-host</td>
+<td>节点请求连接池每个路由默认连接数，默认500</td>
+</tr>
+<tr>
+<td align="left">prime-aws-replica-connections</td>
+<td></td>
+</tr>
+<tr>
+<td align="left">property-resolver</td>
+<td></td>
+</tr>
+<tr>
+<td align="left">rate-limiter-burst-size</td>
+<td></td>
+</tr>
+<tr>
+<td align="left">rate-limiter-enabled</td>
+<td></td>
+</tr>
+<tr>
+<td align="left">rate-limiter-full-fetch-average-rate</td>
+<td></td>
+</tr>
+<tr>
+<td align="left">rate-limiter-privileged-clients</td>
+<td></td>
+</tr>
+<tr>
+<td align="left">rate-limiter-registry-fetch-average-rate</td>
+<td></td>
+</tr>
+<tr>
+<td align="left">rate-limiter-throttle-standard-clients</td>
+<td></td>
+</tr>
+<tr>
+<td align="left">registry-sync-retries</td>
+<td></td>
+</tr>
+<tr>
+<td align="left">registry-sync-retry-wait-ms</td>
+<td></td>
+</tr>
+<tr>
+<td align="left">remote-region-app-whitelist</td>
+<td></td>
+</tr>
+<tr>
+<td align="left">remote-region-connect-timeout-ms</td>
+<td></td>
+</tr>
+<tr>
+<td align="left">remote-region-connection-idle-timeout-seconds</td>
+<td></td>
+</tr>
+<tr>
+<td align="left">remote-region-fetch-thread-pool-size</td>
+<td></td>
+</tr>
+<tr>
+<td align="left">remote-region-read-timeout-ms</td>
+<td></td>
+</tr>
+<tr>
+<td align="left">remote-region-registry-fetch-interval</td>
+<td></td>
+</tr>
+<tr>
+<td align="left">remote-region-total-connections</td>
+<td></td>
+</tr>
+<tr>
+<td align="left">remote-region-total-connections-per-host</td>
+<td></td>
+</tr>
+<tr>
+<td align="left">remote-region-trust-store</td>
+<td></td>
+</tr>
+<tr>
+<td align="left">remote-region-trust-store-password</td>
+<td></td>
+</tr>
+<tr>
+<td align="left">remote-region-urls</td>
+<td></td>
+</tr>
+<tr>
+<td align="left">remote-region-urls-with-name</td>
+<td></td>
+</tr>
+<tr>
+<td align="left">renewal-percent-threshold</td>
+<td></td>
+</tr>
+<tr>
+<td align="left">renewal-threshold-update-interval-ms</td>
+<td></td>
+</tr>
+<tr>
+<td align="left">response-cache-auto-expiration-in-seconds</td>
+<td></td>
+</tr>
+<tr>
+<td align="left">response-cache-update-interval-ms</td>
+<td></td>
+</tr>
+<tr>
+<td align="left">retention-time-in-m-s-in-delta-queue</td>
+<td>默认18000毫秒</td>
+</tr>
+<tr>
+<td align="left">route53-bind-rebind-retries</td>
+<td></td>
+</tr>
+<tr>
+<td align="left">route53-binding-retry-interval-ms</td>
+<td></td>
+</tr>
+<tr>
+<td align="left">route53-domain-t-t-l</td>
+<td></td>
+</tr>
+<tr>
+<td align="left">sync-when-timestamp-differs</td>
+<td>当当前节点和eureka节点时间不同时是否开启节点同步，默认开启</td>
+</tr>
+<tr>
+<td align="left">use-read-only-response-cache</td>
+<td>是否开启缓存更新任务，默认开启</td>
+</tr>
+<tr>
+<td align="left">wait-time-in-ms-when-sync-empty</td>
+<td>等待eureka注册完成时间，默认300000毫秒</td>
+</tr>
+<tr>
+<td align="left">xml-codec-name</td>
+<td>xml编解码器，默认XStreamXml</td>
+</tr>
+</tbody></table>
+<h3 id="Eureka-Client"><a href="#Eureka-Client" class="headerlink" title="Eureka Client"></a>Eureka Client</h3><table>
+<thead>
+<tr>
+<th align="left">element</th>
+<th>descriptio</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="left">allow-redirects</td>
+<td>是否开启请求重定向到备份服务器，默认关闭</td>
+</tr>
+<tr>
+<td align="left">availability-zones</td>
+<td></td>
+</tr>
+<tr>
+<td align="left">backup-registry-impl</td>
+<td></td>
+</tr>
+<tr>
+<td align="left">cache-refresh-executor-exponential-back-off-bound</td>
+<td>scheduler 在超时的情况下，延迟执行时间最大乘数延，默认10</td>
+</tr>
+<tr>
+<td align="left">cache-refresh-executor-thread-pool-size</td>
+<td>cacheRefreshExecutor 缓存刷新数量，默认2</td>
+</tr>
+<tr>
+<td align="left">client-data-accept</td>
+<td>EurekaAccept 客户端数据接收名称</td>
+</tr>
+<tr>
+<td align="left">decoder-name</td>
+<td></td>
+</tr>
+<tr>
+<td align="left">disable-delta</td>
+<td></td>
+</tr>
+<tr>
+<td align="left">dollar-replacement</td>
+<td></td>
+</tr>
+<tr>
+<td align="left">enabled</td>
+<td>是否开启eureka客户端，默认开启</td>
+</tr>
+<tr>
+<td align="left">encoder-name</td>
+<td></td>
+</tr>
+<tr>
+<td align="left">escape-char-replacement</td>
+<td></td>
+</tr>
+<tr>
+<td align="left">eureka-connection-idle-timeout-seconds</td>
+<td>连接到eureka server空闲时间，默认5秒</td>
+</tr>
+<tr>
+<td align="left">eureka-server-connect-timeout-seconds</td>
+<td>连接到eureka server超时时间，默认5秒</td>
+</tr>
+<tr>
+<td align="left">eureka-server-d-n-s-name</td>
+<td>eureka server dns名称</td>
+</tr>
+<tr>
+<td align="left">eureka-server-port</td>
+<td>eureka server端口</td>
+</tr>
+<tr>
+<td align="left">eureka-server-read-timeout-seconds</td>
+<td>请求eureka server读超时时间，默认8秒</td>
+</tr>
+<tr>
+<td align="left">eureka-server-total-connections</td>
+<td>节点请求连接池最大连接数，默认200</td>
+</tr>
+<tr>
+<td align="left">eureka-server-total-connections-per-host</td>
+<td>节点请求连接池每个路由默认连接数，默认50</td>
+</tr>
+<tr>
+<td align="left">eureka-server-u-r-l-context</td>
+<td></td>
+</tr>
+<tr>
+<td align="left">eureka-service-url-poll-interval-seconds</td>
+<td>eureka注册服务器轮询时间，默认300秒</td>
+</tr>
+<tr>
+<td align="left">fetch-registry</td>
+<td>是否开启检索注册信息，默认开启</td>
+</tr>
+<tr>
+<td align="left">fetch-remote-regions-registry</td>
+<td>aws区域列表</td>
+</tr>
+<tr>
+<td align="left">filter-only-up-instances</td>
+<td>是否过滤up状态的节点，默认开启</td>
+</tr>
+<tr>
+<td align="left">g-zip-content</td>
+<td>是否开启gzip压缩，默认开启</td>
+</tr>
+<tr>
+<td align="left">heartbeat-executor-exponential-back-off-bound</td>
+<td>心跳任务，在超时的情况下，延迟执行时间最大乘数延，默认10</td>
+</tr>
+<tr>
+<td align="left">heartbeat-executor-thread-pool-size</td>
+<td>心跳线程池大小，默认2</td>
+</tr>
+<tr>
+<td align="left">initial-instance-info-replication-interval-seconds</td>
+<td>复制间隔时间，默认40秒</td>
+</tr>
+<tr>
+<td align="left">instance-info-replication-interval-seconds</td>
+<td>服务注册任务间隔时间，默认30秒</td>
+</tr>
+<tr>
+<td align="left">log-delta-diff</td>
+<td></td>
+</tr>
+<tr>
+<td align="left">on-demand-update-status-change</td>
+<td>是否开启状态改变通知，默认true</td>
+</tr>
+<tr>
+<td align="left">prefer-same-zone-eureka</td>
+<td></td>
+</tr>
+<tr>
+<td align="left">property-resolver</td>
+<td></td>
+</tr>
+<tr>
+<td align="left">proxy-host</td>
+<td>代理地址</td>
+</tr>
+<tr>
+<td align="left">proxy-password</td>
+<td>代理密码</td>
+</tr>
+<tr>
+<td align="left">proxy-port</td>
+<td>代理端口</td>
+</tr>
+<tr>
+<td align="left">proxy-user-name</td>
+<td>代理用户名</td>
+</tr>
+<tr>
+<td align="left">region</td>
+<td></td>
+</tr>
+<tr>
+<td align="left">register-with-eureka</td>
+<td>是否注册到eureka</td>
+</tr>
+<tr>
+<td align="left">registry-fetch-interval-seconds</td>
+<td>scheduler 缓存刷新定时任务 间隔时间，默认30秒</td>
+</tr>
+<tr>
+<td align="left">registry-refresh-single-vip-address</td>
+<td>eureka server vip地址</td>
+</tr>
+<tr>
+<td align="left">service-url</td>
+<td></td>
+</tr>
+<tr>
+<td align="left">transport</td>
+<td></td>
+</tr>
+<tr>
+<td align="left">Use-dns-for-fetching-service-urls</td>
+<td>是否从dns获取服务地址，默认关闭</td>
+</tr>
+</tbody></table>
+<h2 id="Eureka-Dashboard"><a href="#Eureka-Dashboard" class="headerlink" title="Eureka Dashboard"></a>Eureka Dashboard</h2><table>
+<thead>
+<tr>
+<th align="left">element</th>
+<th>descriptio</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="left">enabled</td>
+<td>是否开启eureka仪表盘，默认</td>
+</tr>
+<tr>
+<td align="left">path</td>
+<td>eureka仪表盘路径，默认’/‘</td>
+</tr>
+</tbody></table>
+
+    </div>
+
+    
+    
+    
+        
+
+<div>
+<ul class="post-copyright">
+  <li class="post-copyright-author">
+    <strong>本文作者： </strong>tookbra
+  </li>
+  <li class="post-copyright-link">
+    <strong>本文链接：</strong>
+    <a href="https://okboom.org/2017/08/24/spring-cloud/eureka/Spring-Cloud-Eureka-Properties/" title="Spring Cloud Eureka(二) 配置文件">https://okboom.org/2017/08/24/spring-cloud/eureka/Spring-Cloud-Eureka-Properties/</a>
+  </li>
+  <li class="post-copyright-license">
+    <strong>版权声明： </strong>本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" rel="noopener" target="_blank"><i class="fab fa-fw fa-creative-commons"></i>BY-NC-SA</a> 许可协议。转载请注明出处！
+  </li>
+</ul>
+</div>
+
+
+      <footer class="post-footer">
+          
+          <div class="post-tags">
+              <a href="/tags/eureka/" rel="tag"><i class="fa fa-tag"></i> eureka</a>
+          </div>
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2017/08/24/spring-cloud/eureka/Spring-Cloud-Eureka-%E4%B8%80/" rel="prev" title="Spring Cloud Eureka(一) 前身今世">
+      <i class="fa fa-chevron-left"></i> Spring Cloud Eureka(一) 前身今世
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/2017/08/24/spring-cloud/eureka/Spring-Cloud-Eureka-Server/" rel="next" title="Spring Cloud Eureka(三) 注册中心">
+      Spring Cloud Eureka(三) 注册中心 <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+    <div class="comments" id="valine-comments"></div>
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#Eureka-Instance"><span class="nav-number">1.</span> <span class="nav-text">Eureka Instance</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Eureka-Server"><span class="nav-number">2.</span> <span class="nav-text">Eureka Server</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Eureka-Client"><span class="nav-number">3.</span> <span class="nav-text">Eureka Client</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Eureka-Dashboard"><span class="nav-number"></span> <span class="nav-text">Eureka Dashboard</span></a></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="tookbra"
+      src="/images/logo.png">
+  <p class="site-author-name" itemprop="name">tookbra</p>
+  <div class="site-description" itemprop="description">Spring Cloud, Dubbo, Netty, 物联网, Java, 中间件</div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives">
+          <span class="site-state-item-count">38</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+        <span class="site-state-item-count">11</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+        <span class="site-state-item-count">14</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author motion-element">
+      <span class="links-of-author-item">
+        <a href="https://github.com/tookbra" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;tookbra" rel="noopener" target="_blank"><i class="fab fa-github fa-fw"></i></a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:tookbra@gmail.com" title="E-Mail → mailto:tookbra@gmail.com" rel="noopener" target="_blank"><i class="fa fa-envelope fa-fw"></i></a>
+      </span>
+  </div>
+  <div class="cc-license motion-element" itemprop="license">
+    <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" class="cc-opacity" rel="noopener" target="_blank"><img src="/images/cc-by-nc-sa.svg" alt="Creative Commons"></a>
+  </div>
+
+
+
+      </div>
+        <div class="back-to-top motion-element">
+          <i class="fa fa-arrow-up"></i>
+          <span>0%</span>
+        </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+
+<div class="copyright">
+  
+  &copy; 2017 – 
+  <span itemprop="copyrightYear">2021</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">tookbra</span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Gemini</a> 强力驱动
+  </div>
+
+        
+
+
+
+
+
+
+<script data-pjax>
+  (function() {
+    function leancloudSelector(url) {
+      url = encodeURI(url);
+      return document.getElementById(url).querySelector('.leancloud-visitors-count');
+    }
+
+    function addCount(Counter) {
+      var visitors = document.querySelector('.leancloud_visitors');
+      var url = decodeURI(visitors.id);
+      var title = visitors.dataset.flagTitle;
+
+      Counter('get', '/classes/Counter?where=' + encodeURIComponent(JSON.stringify({ url })))
+        .then(response => response.json())
+        .then(({ results }) => {
+          if (results.length > 0) {
+            var counter = results[0];
+            leancloudSelector(url).innerText = counter.time + 1;
+            Counter('put', '/classes/Counter/' + counter.objectId, { time: { '__op': 'Increment', 'amount': 1 } })
+              .catch(error => {
+                console.error('Failed to save visitor count', error);
+              });
+          } else {
+              leancloudSelector(url).innerText = 'Counter not initialized! More info at console err msg.';
+              console.error('ATTENTION! LeanCloud counter has security bug, see how to solve it here: https://github.com/theme-next/hexo-leancloud-counter-security. \n However, you can still use LeanCloud without security, by setting `security` option to `false`.');
+            
+          }
+        })
+        .catch(error => {
+          console.error('LeanCloud Counter Error', error);
+        });
+    }
+
+    function showTime(Counter) {
+      var visitors = document.querySelectorAll('.leancloud_visitors');
+      var entries = [...visitors].map(element => {
+        return decodeURI(element.id);
+      });
+
+      Counter('get', '/classes/Counter?where=' + encodeURIComponent(JSON.stringify({ url: { '$in': entries } })))
+        .then(response => response.json())
+        .then(({ results }) => {
+          for (let url of entries) {
+            let target = results.find(item => item.url === url);
+            leancloudSelector(url).innerText = target ? target.time : 0;
+          }
+        })
+        .catch(error => {
+          console.error('LeanCloud Counter Error', error);
+        });
+    }
+
+    let { app_id, app_key, server_url } = {"enable":true,"app_id":"uJIVXaXi09cKMc5dgb90kxxM-gzGzoHsz","app_key":"yf8wJTDY78HMHMgsz92ReKgm","server_url":null,"security":true};
+    function fetchData(api_server) {
+      var Counter = (method, url, data) => {
+        return fetch(`${api_server}/1.1${url}`, {
+          method,
+          headers: {
+            'X-LC-Id'     : app_id,
+            'X-LC-Key'    : app_key,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(data)
+        });
+      };
+      if (CONFIG.page.isPost) {
+        if (CONFIG.hostname !== location.hostname) return;
+        addCount(Counter);
+      } else if (document.querySelectorAll('.post-title-link').length >= 1) {
+        showTime(Counter);
+      }
+    }
+
+    let api_server = app_id.slice(-9) !== '-MdYXbMMI' ? server_url : `https://${app_id.slice(0, 8).toLowerCase()}.api.lncldglobal.com`;
+
+    if (api_server) {
+      fetchData(api_server);
+    } else {
+      fetch('https://app-router.leancloud.cn/2/route?appId=' + app_id)
+        .then(response => response.json())
+        .then(({ api_server }) => {
+          fetchData('https://' + api_server);
+        });
+    }
+  })();
+</script>
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="//cdn.jsdelivr.net/gh/theme-next/theme-next-pjax@0/pjax.min.js"></script>
+  <script src="//cdn.jsdelivr.net/npm/jquery@3/dist/jquery.min.js"></script>
+  <script src="//cdn.jsdelivr.net/gh/fancyapps/fancybox@3/dist/jquery.fancybox.min.js"></script>
+  <script src="//cdn.jsdelivr.net/npm/medium-zoom@1/dist/medium-zoom.min.js"></script>
+  <script src="//cdn.jsdelivr.net/npm/lozad@1/dist/lozad.min.js"></script>
+  <script src="//cdn.jsdelivr.net/npm/pangu@4/dist/browser/pangu.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/pisces.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+  <script>
+var pjax = new Pjax({
+  selectors: [
+    'head title',
+    '#page-configurations',
+    '.content-wrap',
+    '.post-toc-wrap',
+    '.languages',
+    '#pjax'
+  ],
+  switches: {
+    '.post-toc-wrap': Pjax.switches.innerHTML
+  },
+  analytics: false,
+  cacheBust: false,
+  scrollTo : !CONFIG.bookmark.enable
+});
+
+window.addEventListener('pjax:success', () => {
+  document.querySelectorAll('script[data-pjax], script#page-configurations, #pjax script').forEach(element => {
+    var code = element.text || element.textContent || element.innerHTML || '';
+    var parent = element.parentNode;
+    parent.removeChild(element);
+    var script = document.createElement('script');
+    if (element.id) {
+      script.id = element.id;
+    }
+    if (element.className) {
+      script.className = element.className;
+    }
+    if (element.type) {
+      script.type = element.type;
+    }
+    if (element.src) {
+      script.src = element.src;
+      // Force synchronous loading of peripheral JS.
+      script.async = false;
+    }
+    if (element.dataset.pjax !== undefined) {
+      script.dataset.pjax = '';
+    }
+    if (code !== '') {
+      script.appendChild(document.createTextNode(code));
+    }
+    parent.appendChild(script);
+  });
+  NexT.boot.refresh();
+  // Define Motion Sequence & Bootstrap Motion.
+  if (CONFIG.motion.enable) {
+    NexT.motion.integrator
+      .init()
+      .add(NexT.motion.middleWares.subMenu)
+      .add(NexT.motion.middleWares.postList)
+      .bootstrap();
+  }
+  NexT.utils.updateSidebarPosition();
+});
+</script>
+
+
+
+
+  
+  <script data-pjax>
+    (function(){
+      var bp = document.createElement('script');
+      var curProtocol = window.location.protocol.split(':')[0];
+      bp.src = (curProtocol === 'https') ? 'https://zz.bdstatic.com/linksubmit/push.js' : 'http://push.zhanzhang.baidu.com/push.js';
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(bp, s);
+    })();
+  </script>
+
+
+
+
+
+
+
+
+
+
+
+<script data-pjax>
+document.querySelectorAll('.pdfobject-container').forEach(element => {
+  let url = element.dataset.target;
+  let pdfOpenParams = {
+    navpanes : 0,
+    toolbar  : 0,
+    statusbar: 0,
+    pagemode : 'thumbs',
+    view     : 'FitH'
+  };
+  let pdfOpenFragment = '#' + Object.entries(pdfOpenParams).map(([key, value]) => `${key}=${encodeURIComponent(value)}`).join('&');
+  let fullURL = `/lib/pdf/web/viewer.html?file=${encodeURIComponent(url)}${pdfOpenFragment}`;
+
+  if (NexT.utils.supportsPDFs()) {
+    element.innerHTML = `<embed class="pdfobject" src="${url + pdfOpenFragment}" type="application/pdf" style="height: ${element.dataset.height};">`;
+  } else {
+    element.innerHTML = `<iframe src="${fullURL}" style="height: ${element.dataset.height};" frameborder="0"></iframe>`;
+  }
+});
+</script>
+
+
+<script data-pjax>
+if (document.querySelectorAll('pre.mermaid').length) {
+  NexT.utils.getScript('//cdn.jsdelivr.net/npm/mermaid@8/dist/mermaid.min.js', () => {
+    mermaid.initialize({
+      theme    : 'forest',
+      logLevel : 3,
+      flowchart: { curve     : 'linear' },
+      gantt    : { axisFormat: '%m/%d/%Y' },
+      sequence : { actorMargin: 50 }
+    });
+  }, window.mermaid);
+}
+</script>
+
+
+    <div id="pjax">
+  
+
+  
+
+  
+
+
+<script>
+NexT.utils.loadComments(document.querySelector('#valine-comments'), () => {
+  NexT.utils.getScript('//unpkg.com/valine/dist/Valine.min.js', () => {
+    var GUEST = ['nick', 'mail', 'link'];
+    var guest = 'nick,mail,link';
+    guest = guest.split(',').filter(item => {
+      return GUEST.includes(item);
+    });
+    new Valine({
+      el         : '#valine-comments',
+      verify     : false,
+      notify     : false,
+      appId      : 'uJIVXaXi09cKMc5dgb90kxxM-gzGzoHsz',
+      appKey     : 'yf8wJTDY78HMHMgsz92ReKgm',
+      placeholder: "欢迎留言",
+      avatar     : 'mm',
+      meta       : guest,
+      pageSize   : '10' || 10,
+      visitor    : false,
+      lang       : '' || 'zh-cn',
+      path       : location.pathname,
+      recordIP   : false,
+      serverURLs : ''
+    });
+  }, window.Valine);
+});
+</script>
+
+    </div>
+  <script src="/live2d-widget/autoload.js"></script>
+</body>
+</html>

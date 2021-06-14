@@ -1,0 +1,771 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 4.2.1">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/logo.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/logo.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/logo.png">
+  <link rel="mask-icon" href="/images/logo.png" color="#222">
+  <meta http-equiv="Cache-Control" content="no-transform">
+  <meta http-equiv="Cache-Control" content="no-siteapp">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+  <link rel="stylesheet" href="//cdn.jsdelivr.net/gh/fancyapps/fancybox@3/dist/jquery.fancybox.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"okboom.org","root":"/","scheme":"Gemini","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":true},"copycode":{"enable":true,"show_result":true,"style":null},"back2top":{"enable":true,"sidebar":true,"scrollpercent":true},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":true,"mediumzoom":true,"lazyload":true,"pangu":true,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":true,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":false,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":true,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}}};
+  </script>
+
+  <meta name="description" content="概述接上文 我们描述了怎么去实现spring schema扩展，本文我们来介绍通过另外一种方式也来实现上文中实现的功能。 在以前开发的时候我们通常通过配置xml来告诉spring容器在应用程序中如何去实例化，配置和组装应用程序中的对象，但是xml配置不是唯一配置元数据的方式。  基于注释的配置 从Spring 2.5开始引入了对基于注释的配置元数据的支持 基于Java的配置 从Spring3.0">
+<meta property="og:type" content="article">
+<meta property="og:title" content="spring schema extends2(二)">
+<meta property="og:url" content="https://okboom.org/2017/12/01/spring/spring-schema-extends2/index.html">
+<meta property="og:site_name" content="Ok Boom">
+<meta property="og:description" content="概述接上文 我们描述了怎么去实现spring schema扩展，本文我们来介绍通过另外一种方式也来实现上文中实现的功能。 在以前开发的时候我们通常通过配置xml来告诉spring容器在应用程序中如何去实例化，配置和组装应用程序中的对象，但是xml配置不是唯一配置元数据的方式。  基于注释的配置 从Spring 2.5开始引入了对基于注释的配置元数据的支持 基于Java的配置 从Spring3.0">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://okboom.org/images/spring/spring-schema.png">
+<meta property="article:published_time" content="2017-12-01T06:28:11.000Z">
+<meta property="article:modified_time" content="2021-06-14T17:04:44.737Z">
+<meta property="article:author" content="tookbra">
+<meta property="article:tag" content="spring">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://okboom.org/images/spring/spring-schema.png">
+
+<link rel="canonical" href="https://okboom.org/2017/12/01/spring/spring-schema-extends2/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'zh-CN'
+  };
+</script>
+
+  <title>spring schema extends2(二) | Ok Boom</title>
+  
+    <script async src="https://www.googletagmanager.com/gtag/js?id=UA-105698309-2"></script>
+    <script data-pjax>
+      if (CONFIG.hostname === location.hostname) {
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
+        gtag('config', 'UA-105698309-2');
+      }
+    </script>
+
+
+  <script data-pjax>
+    var _hmt = _hmt || [];
+    (function() {
+      var hm = document.createElement("script");
+      hm.src = "https://hm.baidu.com/hm.js?bba0be0bae0736b339e0df8f68b295f8";
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(hm, s);
+    })();
+  </script>
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">Ok Boom</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+      <p class="site-subtitle" itemprop="description">”勿忘初心，方得始终“</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-主页">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>主页</a>
+
+  </li>
+        <li class="menu-item menu-item-标签">
+
+    <a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a>
+
+  </li>
+        <li class="menu-item menu-item-分类">
+
+    <a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类</a>
+
+  </li>
+        <li class="menu-item menu-item-归档">
+
+    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a>
+
+  </li>
+        <li class="menu-item menu-item-关于">
+
+    <a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>关于</a>
+
+  </li>
+  </ul>
+</nav>
+
+
+
+
+</div>
+    </header>
+
+    
+  <div class="reading-progress-bar"></div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://okboom.org/2017/12/01/spring/spring-schema-extends2/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/logo.png">
+      <meta itemprop="name" content="tookbra">
+      <meta itemprop="description" content="Spring Cloud, Dubbo, Netty, 物联网, Java, 中间件">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Ok Boom">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          spring schema extends2(二)
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2017-12-01 14:28:11" itemprop="dateCreated datePublished" datetime="2017-12-01T14:28:11+08:00">2017-12-01</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2021-06-15 01:04:44" itemprop="dateModified" datetime="2021-06-15T01:04:44+08:00">2021-06-15</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/spring/" itemprop="url" rel="index"><span itemprop="name">spring</span></a>
+                </span>
+            </span>
+
+          
+            <span id="/2017/12/01/spring/spring-schema-extends2/" class="post-meta-item leancloud_visitors" data-flag-title="spring schema extends2(二)" title="阅读次数">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-eye"></i>
+              </span>
+              <span class="post-meta-item-text">阅读次数：</span>
+              <span class="leancloud-visitors-count"></span>
+            </span>
+  
+  <span class="post-meta-item">
+    
+      <span class="post-meta-item-icon">
+        <i class="far fa-comment"></i>
+      </span>
+      <span class="post-meta-item-text">Valine：</span>
+    
+    <a title="valine" href="/2017/12/01/spring/spring-schema-extends2/#valine-comments" itemprop="discussionUrl">
+      <span class="post-comments-count valine-comment-count" data-xid="/2017/12/01/spring/spring-schema-extends2/" itemprop="commentCount"></span>
+    </a>
+  </span>
+  
+  
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <p><img data-src="/images/spring/spring-schema.png" alt="spring-schema"></p>
+<h2 id="概述"><a href="#概述" class="headerlink" title="概述"></a>概述</h2><p>接<a href="/2017/11/30/spring-schema-extends1/">上文</a> 我们描述了怎么去实现spring schema扩展，本文我们来介绍通过另外一种方式也来实现<a href="">上文</a>中实现的功能。</p>
+<p>在以前开发的时候我们通常通过配置xml来告诉spring容器在应用程序中如何去实例化，配置和组装应用程序中的对象，但是xml配置不是唯一配置元数据的方式。</p>
+<ul>
+<li><a href="https://docs.spring.io/spring/docs/4.2.x/spring-framework-reference/html/beans.html#beans-annotation-config" target="_blank" rel="noopener">基于注释的配置</a> 从Spring 2.5开始引入了对基于注释的配置元数据的支持</li>
+<li><a href="https://docs.spring.io/spring/docs/4.2.x/spring-framework-reference/html/beans.html#beans-java" target="_blank" rel="noopener">基于Java的配置</a> 从Spring3.0开始，提供了基于Java的配置方式，我们可以使用java类来定义配置属性</li>
+</ul>
+<p>在Spring boot中默认是使用java配置的方式。</p>
+<p>我们按照以下步骤来扩展java配置</p>
+<ul>
+<li>自定义注解</li>
+<li>实现ImportBeanDefinitionRegistrar</li>
+<li>实现BeanFactoryPostProcessor</li>
+<li>验证结果</li>
+</ul>
+<a id="more"></a>
+
+<h2 id="自定义注解"><a href="#自定义注解" class="headerlink" title="自定义注解"></a>自定义注解</h2><p>基于Java配置扩展关键一点就是使用<code>@Import</code>注解，Spring 3.0提供了这个注解用来支持在Configuration类中引入其它的配置类，包括<code>Configuration</code>类, <code>ImportSelector</code>和<code>ImportBeanDefinitionRegistrar</code>的实现类。</p>
+<p>我们可以通过这个注解来引入自定义的扩展Bean。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">package</span> com.tookbra.monine.config;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> com.tookbra.monine.config.spring.configuration.ProtocolBeanDefinitionRegistrar;</span><br><span class="line"><span class="keyword">import</span> org.springframework.context.annotation.Import;</span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> java.lang.annotation.*;</span><br><span class="line"></span><br><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment"> * <span class="doctag">@author</span> tookbra</span></span><br><span class="line"><span class="comment"> * <span class="doctag">@date</span> 2017/12/1</span></span><br><span class="line"><span class="comment"> * <span class="doctag">@description</span></span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="meta">@Retention</span>(RetentionPolicy.RUNTIME)</span><br><span class="line"><span class="meta">@Target</span>(ElementType.TYPE)</span><br><span class="line"><span class="meta">@Documented</span></span><br><span class="line"><span class="meta">@Import</span>(ProtocolBeanDefinitionRegistrar<span class="class">.<span class="keyword">class</span>)</span></span><br><span class="line"><span class="class"><span class="title">public</span> @<span class="title">interface</span> <span class="title">EnableProtocol</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">    <span class="function">String <span class="title">name</span><span class="params">()</span> <span class="keyword">default</span> ""</span>;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">int</span> <span class="title">port</span><span class="params">()</span></span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>在EnableProtocol注解类上，我们使用了@Import(ProtocolBeanDefinitionRegistrar.class)，在Spring容器处理<code>@EnableProtocold</code>的时候会实例化并调用<code>ApolloConfigRegistrar</code>的方法。</p>
+<h2 id="实现ImportBeanDefinitionRegistrar"><a href="#实现ImportBeanDefinitionRegistrar" class="headerlink" title="实现ImportBeanDefinitionRegistrar"></a>实现ImportBeanDefinitionRegistrar</h2><p><code>ImportBeanDefinitionRegistrar</code>接口定义了<code>registerBeanDefinitions</code>方法，从而允许我们向Spring注册必要的Bean。</p>
+<p>自定义ImportBeanDefinitionRegistrar实现（<code>ApolloConfigRegistrar</code>）主要做了两件事情：</p>
+<ol>
+<li>描述protocol bean的结构并注册</li>
+<li>向Spring注册Bean：ProtocolProcessor</li>
+</ol>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">package</span> com.tookbra.monine.config.spring.configuration;</span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> com.tookbra.monine.config.EnableProtocol;</span><br><span class="line"><span class="keyword">import</span> com.tookbra.monine.config.Protocol;</span><br><span class="line"><span class="keyword">import</span> org.springframework.beans.factory.config.ConfigurableBeanFactory;</span><br><span class="line"><span class="keyword">import</span> org.springframework.beans.factory.support.BeanDefinitionBuilder;</span><br><span class="line"><span class="keyword">import</span> org.springframework.beans.factory.support.BeanDefinitionRegistry;</span><br><span class="line"><span class="keyword">import</span> org.springframework.beans.factory.support.GenericBeanDefinition;</span><br><span class="line"><span class="keyword">import</span> org.springframework.context.annotation.ImportBeanDefinitionRegistrar;</span><br><span class="line"><span class="keyword">import</span> org.springframework.core.annotation.AnnotationAttributes;</span><br><span class="line"><span class="keyword">import</span> org.springframework.core.type.AnnotationMetadata;</span><br><span class="line"></span><br><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment"> * <span class="doctag">@author</span> tookbra</span></span><br><span class="line"><span class="comment"> * <span class="doctag">@date</span> 2017/12/1</span></span><br><span class="line"><span class="comment"> * <span class="doctag">@description</span></span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">ProtocolBeanDefinitionRegistrar</span> <span class="keyword">implements</span> <span class="title">ImportBeanDefinitionRegistrar</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">registerBeanDefinitions</span><span class="params">(AnnotationMetadata annotationMetadata, BeanDefinitionRegistry beanDefinitionRegistry)</span> </span>&#123;</span><br><span class="line">        AnnotationAttributes annotationAttributes = AnnotationAttributes.fromMap(annotationMetadata</span><br><span class="line">                .getAnnotationAttributes(EnableProtocol<span class="class">.<span class="keyword">class</span>.<span class="title">getName</span>()))</span>;</span><br><span class="line">        String name = (String) annotationAttributes.get(<span class="string">"name"</span>);</span><br><span class="line">        <span class="keyword">int</span> port = (Integer) annotationAttributes.get(<span class="string">"port"</span>);</span><br><span class="line"></span><br><span class="line">        GenericBeanDefinition beanDefinition = <span class="keyword">new</span> GenericBeanDefinition();</span><br><span class="line">        beanDefinition.setBeanClass(Protocol<span class="class">.<span class="keyword">class</span>)</span>;</span><br><span class="line">        beanDefinition.setScope(ConfigurableBeanFactory.SCOPE_SINGLETON);</span><br><span class="line">        beanDefinition.getPropertyValues().addPropertyValue(<span class="string">"name"</span>, name);</span><br><span class="line">        beanDefinition.getPropertyValues().addPropertyValue(<span class="string">"port"</span>, port);</span><br><span class="line">        beanDefinitionRegistry.registerBeanDefinition(<span class="string">"protocol"</span>, beanDefinition);</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">        BeanDefinitionBuilder bdb = BeanDefinitionBuilder.genericBeanDefinition(ProtocolProcessor<span class="class">.<span class="keyword">class</span>)</span>;</span><br><span class="line">        bdb.addPropertyValue(<span class="string">"protocol"</span>, beanDefinition);</span><br><span class="line">        beanDefinitionRegistry.registerBeanDefinition(ProtocolProcessor<span class="class">.<span class="keyword">class</span>.<span class="title">getName</span>(), <span class="title">bdb</span>.<span class="title">getBeanDefinition</span>())</span>;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+
+
+<h2 id="实现BeanFactoryPostProcessor"><a href="#实现BeanFactoryPostProcessor" class="headerlink" title="实现BeanFactoryPostProcessor"></a>实现BeanFactoryPostProcessor</h2><p><code>BeanFactoryPostProcessor</code>提供的<code>postProcessBeanFactory</code>方法可以在Spring容器实例化任何bean之前对bean属性进行更改操作，我们可以配置多个<code>BeanFactoryPostProcessor</code>并设置order属性来控制执行顺序</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">package</span> com.tookbra.monine.config.spring.configuration;</span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> com.tookbra.monine.config.Protocol;</span><br><span class="line"><span class="keyword">import</span> org.springframework.beans.BeansException;</span><br><span class="line"><span class="keyword">import</span> org.springframework.beans.factory.config.BeanFactoryPostProcessor;</span><br><span class="line"><span class="keyword">import</span> org.springframework.beans.factory.config.ConfigurableListableBeanFactory;</span><br><span class="line"><span class="keyword">import</span> org.springframework.context.EnvironmentAware;</span><br><span class="line"><span class="keyword">import</span> org.springframework.core.env.ConfigurableEnvironment;</span><br><span class="line"><span class="keyword">import</span> org.springframework.core.env.Environment;</span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> java.util.Objects;</span><br><span class="line"></span><br><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment"> * <span class="doctag">@author</span> tookbra</span></span><br><span class="line"><span class="comment"> * <span class="doctag">@date</span> 2017/12/1</span></span><br><span class="line"><span class="comment"> * <span class="doctag">@description</span></span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">ProtocolProcessor</span> <span class="keyword">implements</span> <span class="title">BeanFactoryPostProcessor</span>, <span class="title">EnvironmentAware</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">private</span> ConfigurableEnvironment environment;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"></span><br><span class="line">    <span class="keyword">private</span> Protocol protocol;</span><br><span class="line"></span><br><span class="line">    <span class="comment">/**</span></span><br><span class="line"><span class="comment">     * 容器初始化前调用</span></span><br><span class="line"><span class="comment">     * <span class="doctag">@param</span> beanFactory</span></span><br><span class="line"><span class="comment">     * <span class="doctag">@throws</span> BeansException</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">postProcessBeanFactory</span><span class="params">(ConfigurableListableBeanFactory beanFactory)</span> <span class="keyword">throws</span> BeansException </span>&#123;</span><br><span class="line">        <span class="keyword">if</span>(Objects.isNull(protocol)) &#123;</span><br><span class="line">            <span class="keyword">return</span>;</span><br><span class="line">        &#125;</span><br><span class="line">        System.out.println(<span class="string">"============&gt;&gt;"</span>+ protocol.getName());</span><br><span class="line">        System.out.println(<span class="string">"============&gt;&gt;"</span>+ protocol.getPort());</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">setEnvironment</span><span class="params">(Environment environment)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">this</span>.environment = (ConfigurableEnvironment)environment;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> Protocol <span class="title">getProtocol</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        <span class="keyword">return</span> protocol;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">setProtocol</span><span class="params">(Protocol protocol)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">this</span>.protocol = protocol;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+
+
+<h2 id="BeanPostProcessor"><a href="#BeanPostProcessor" class="headerlink" title="BeanPostProcessor"></a>BeanPostProcessor</h2><p><code>BeanPostProcessor</code>接口可以让我们在Srping容器完成实例化，配置和初始化bean之后实现一些自定义逻辑。</p>
+<p><code>BeanPostProcessor</code>提供了两个方法：<code>postProcessBeforeInitialization</code>和<code>postProcessAfterInitialization</code>，主要针对bean初始化提供扩展。</p>
+<ul>
+<li><code>postProcessBeforeInitialization</code>会在每一个bean实例化之后、初始化（如afterPropertiesSet方法）之前被调用。</li>
+<li><code>postProcessAfterInitialization</code>则在每一个bean初始化之后被调用。</li>
+</ul>
+<p>我们常用的<code>@Autowired</code>注解就是通过<code>postProcessBeforeInitialization</code>实现的（<code>AutowiredAnnotationBeanPostProcessor</code>）。</p>
+<h2 id="验证结果"><a href="#验证结果" class="headerlink" title="验证结果"></a>验证结果</h2><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">package</span> com.tookbra.monine;</span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> com.tookbra.monine.config.EnableProtocol;</span><br><span class="line"><span class="keyword">import</span> org.springframework.boot.SpringApplication;</span><br><span class="line"><span class="keyword">import</span> org.springframework.context.ConfigurableApplicationContext;</span><br><span class="line"></span><br><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment"> * <span class="doctag">@author</span> tookbra</span></span><br><span class="line"><span class="comment"> * <span class="doctag">@date</span> 2017/12/1</span></span><br><span class="line"><span class="comment"> * <span class="doctag">@description</span></span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="meta">@EnableProtocol</span>(name = <span class="string">"monine"</span>, port = <span class="number">6400</span>)</span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">Main2</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span> </span>&#123;</span><br><span class="line">        ConfigurableApplicationContext context = SpringApplication.run(Main2<span class="class">.<span class="keyword">class</span>, <span class="title">args</span>)</span>;</span><br><span class="line">        context.close();</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+
+
+<h2 id="参考资料"><a href="#参考资料" class="headerlink" title="参考资料"></a>参考资料</h2><p><a href="https://github.com/tookbra/spring-learn/blob/master/spring-schema/src/main/java/com/tookbra/monine/Main2.java" target="_blank" rel="noopener">本文代码地址</a><br><a href="https://docs.spring.io/spring/docs/4.2.x/spring-framework-reference/html/beans.html#beans-annotation-config" target="_blank" rel="noopener">基于注释的配置</a><br><a href="https://docs.spring.io/spring/docs/4.2.x/spring-framework-reference/html/beans.html#beans-java" target="_blank" rel="noopener">基于Java的配置</a><br><a href="http://nobodyiam.com/2017/02/26/several-ways-to-extend-spring/" target="_blank" rel="noopener">扩展Spring的几种方式</a></p>
+
+    </div>
+
+    
+    
+    
+        
+
+<div>
+<ul class="post-copyright">
+  <li class="post-copyright-author">
+    <strong>本文作者： </strong>tookbra
+  </li>
+  <li class="post-copyright-link">
+    <strong>本文链接：</strong>
+    <a href="https://okboom.org/2017/12/01/spring/spring-schema-extends2/" title="spring schema extends2(二)">https://okboom.org/2017/12/01/spring/spring-schema-extends2/</a>
+  </li>
+  <li class="post-copyright-license">
+    <strong>版权声明： </strong>本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" rel="noopener" target="_blank"><i class="fab fa-fw fa-creative-commons"></i>BY-NC-SA</a> 许可协议。转载请注明出处！
+  </li>
+</ul>
+</div>
+
+
+      <footer class="post-footer">
+          
+          <div class="post-tags">
+              <a href="/tags/spring/" rel="tag"><i class="fa fa-tag"></i> spring</a>
+          </div>
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2017/11/30/spring/spring-schema-extends1/" rel="prev" title="spring schema extends(一)">
+      <i class="fa fa-chevron-left"></i> spring schema extends(一)
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/2018/10/05/hello-world/" rel="next" title="Google Java编程风格指南">
+      Google Java编程风格指南 <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+    <div class="comments" id="valine-comments"></div>
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#概述"><span class="nav-number">1.</span> <span class="nav-text">概述</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#自定义注解"><span class="nav-number">2.</span> <span class="nav-text">自定义注解</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#实现ImportBeanDefinitionRegistrar"><span class="nav-number">3.</span> <span class="nav-text">实现ImportBeanDefinitionRegistrar</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#实现BeanFactoryPostProcessor"><span class="nav-number">4.</span> <span class="nav-text">实现BeanFactoryPostProcessor</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#BeanPostProcessor"><span class="nav-number">5.</span> <span class="nav-text">BeanPostProcessor</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#验证结果"><span class="nav-number">6.</span> <span class="nav-text">验证结果</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#参考资料"><span class="nav-number">7.</span> <span class="nav-text">参考资料</span></a></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="tookbra"
+      src="/images/logo.png">
+  <p class="site-author-name" itemprop="name">tookbra</p>
+  <div class="site-description" itemprop="description">Spring Cloud, Dubbo, Netty, 物联网, Java, 中间件</div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives">
+          <span class="site-state-item-count">38</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+        <span class="site-state-item-count">11</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+        <span class="site-state-item-count">14</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author motion-element">
+      <span class="links-of-author-item">
+        <a href="https://github.com/tookbra" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;tookbra" rel="noopener" target="_blank"><i class="fab fa-github fa-fw"></i></a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:tookbra@gmail.com" title="E-Mail → mailto:tookbra@gmail.com" rel="noopener" target="_blank"><i class="fa fa-envelope fa-fw"></i></a>
+      </span>
+  </div>
+  <div class="cc-license motion-element" itemprop="license">
+    <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" class="cc-opacity" rel="noopener" target="_blank"><img src="/images/cc-by-nc-sa.svg" alt="Creative Commons"></a>
+  </div>
+
+
+
+      </div>
+        <div class="back-to-top motion-element">
+          <i class="fa fa-arrow-up"></i>
+          <span>0%</span>
+        </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+
+<div class="copyright">
+  
+  &copy; 2017 – 
+  <span itemprop="copyrightYear">2021</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">tookbra</span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Gemini</a> 强力驱动
+  </div>
+
+        
+
+
+
+
+
+
+<script data-pjax>
+  (function() {
+    function leancloudSelector(url) {
+      url = encodeURI(url);
+      return document.getElementById(url).querySelector('.leancloud-visitors-count');
+    }
+
+    function addCount(Counter) {
+      var visitors = document.querySelector('.leancloud_visitors');
+      var url = decodeURI(visitors.id);
+      var title = visitors.dataset.flagTitle;
+
+      Counter('get', '/classes/Counter?where=' + encodeURIComponent(JSON.stringify({ url })))
+        .then(response => response.json())
+        .then(({ results }) => {
+          if (results.length > 0) {
+            var counter = results[0];
+            leancloudSelector(url).innerText = counter.time + 1;
+            Counter('put', '/classes/Counter/' + counter.objectId, { time: { '__op': 'Increment', 'amount': 1 } })
+              .catch(error => {
+                console.error('Failed to save visitor count', error);
+              });
+          } else {
+              leancloudSelector(url).innerText = 'Counter not initialized! More info at console err msg.';
+              console.error('ATTENTION! LeanCloud counter has security bug, see how to solve it here: https://github.com/theme-next/hexo-leancloud-counter-security. \n However, you can still use LeanCloud without security, by setting `security` option to `false`.');
+            
+          }
+        })
+        .catch(error => {
+          console.error('LeanCloud Counter Error', error);
+        });
+    }
+
+    function showTime(Counter) {
+      var visitors = document.querySelectorAll('.leancloud_visitors');
+      var entries = [...visitors].map(element => {
+        return decodeURI(element.id);
+      });
+
+      Counter('get', '/classes/Counter?where=' + encodeURIComponent(JSON.stringify({ url: { '$in': entries } })))
+        .then(response => response.json())
+        .then(({ results }) => {
+          for (let url of entries) {
+            let target = results.find(item => item.url === url);
+            leancloudSelector(url).innerText = target ? target.time : 0;
+          }
+        })
+        .catch(error => {
+          console.error('LeanCloud Counter Error', error);
+        });
+    }
+
+    let { app_id, app_key, server_url } = {"enable":true,"app_id":"uJIVXaXi09cKMc5dgb90kxxM-gzGzoHsz","app_key":"yf8wJTDY78HMHMgsz92ReKgm","server_url":null,"security":true};
+    function fetchData(api_server) {
+      var Counter = (method, url, data) => {
+        return fetch(`${api_server}/1.1${url}`, {
+          method,
+          headers: {
+            'X-LC-Id'     : app_id,
+            'X-LC-Key'    : app_key,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(data)
+        });
+      };
+      if (CONFIG.page.isPost) {
+        if (CONFIG.hostname !== location.hostname) return;
+        addCount(Counter);
+      } else if (document.querySelectorAll('.post-title-link').length >= 1) {
+        showTime(Counter);
+      }
+    }
+
+    let api_server = app_id.slice(-9) !== '-MdYXbMMI' ? server_url : `https://${app_id.slice(0, 8).toLowerCase()}.api.lncldglobal.com`;
+
+    if (api_server) {
+      fetchData(api_server);
+    } else {
+      fetch('https://app-router.leancloud.cn/2/route?appId=' + app_id)
+        .then(response => response.json())
+        .then(({ api_server }) => {
+          fetchData('https://' + api_server);
+        });
+    }
+  })();
+</script>
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="//cdn.jsdelivr.net/gh/theme-next/theme-next-pjax@0/pjax.min.js"></script>
+  <script src="//cdn.jsdelivr.net/npm/jquery@3/dist/jquery.min.js"></script>
+  <script src="//cdn.jsdelivr.net/gh/fancyapps/fancybox@3/dist/jquery.fancybox.min.js"></script>
+  <script src="//cdn.jsdelivr.net/npm/medium-zoom@1/dist/medium-zoom.min.js"></script>
+  <script src="//cdn.jsdelivr.net/npm/lozad@1/dist/lozad.min.js"></script>
+  <script src="//cdn.jsdelivr.net/npm/pangu@4/dist/browser/pangu.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/pisces.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+  <script>
+var pjax = new Pjax({
+  selectors: [
+    'head title',
+    '#page-configurations',
+    '.content-wrap',
+    '.post-toc-wrap',
+    '.languages',
+    '#pjax'
+  ],
+  switches: {
+    '.post-toc-wrap': Pjax.switches.innerHTML
+  },
+  analytics: false,
+  cacheBust: false,
+  scrollTo : !CONFIG.bookmark.enable
+});
+
+window.addEventListener('pjax:success', () => {
+  document.querySelectorAll('script[data-pjax], script#page-configurations, #pjax script').forEach(element => {
+    var code = element.text || element.textContent || element.innerHTML || '';
+    var parent = element.parentNode;
+    parent.removeChild(element);
+    var script = document.createElement('script');
+    if (element.id) {
+      script.id = element.id;
+    }
+    if (element.className) {
+      script.className = element.className;
+    }
+    if (element.type) {
+      script.type = element.type;
+    }
+    if (element.src) {
+      script.src = element.src;
+      // Force synchronous loading of peripheral JS.
+      script.async = false;
+    }
+    if (element.dataset.pjax !== undefined) {
+      script.dataset.pjax = '';
+    }
+    if (code !== '') {
+      script.appendChild(document.createTextNode(code));
+    }
+    parent.appendChild(script);
+  });
+  NexT.boot.refresh();
+  // Define Motion Sequence & Bootstrap Motion.
+  if (CONFIG.motion.enable) {
+    NexT.motion.integrator
+      .init()
+      .add(NexT.motion.middleWares.subMenu)
+      .add(NexT.motion.middleWares.postList)
+      .bootstrap();
+  }
+  NexT.utils.updateSidebarPosition();
+});
+</script>
+
+
+
+
+  
+  <script data-pjax>
+    (function(){
+      var bp = document.createElement('script');
+      var curProtocol = window.location.protocol.split(':')[0];
+      bp.src = (curProtocol === 'https') ? 'https://zz.bdstatic.com/linksubmit/push.js' : 'http://push.zhanzhang.baidu.com/push.js';
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(bp, s);
+    })();
+  </script>
+
+
+
+
+
+
+
+
+
+
+
+<script data-pjax>
+document.querySelectorAll('.pdfobject-container').forEach(element => {
+  let url = element.dataset.target;
+  let pdfOpenParams = {
+    navpanes : 0,
+    toolbar  : 0,
+    statusbar: 0,
+    pagemode : 'thumbs',
+    view     : 'FitH'
+  };
+  let pdfOpenFragment = '#' + Object.entries(pdfOpenParams).map(([key, value]) => `${key}=${encodeURIComponent(value)}`).join('&');
+  let fullURL = `/lib/pdf/web/viewer.html?file=${encodeURIComponent(url)}${pdfOpenFragment}`;
+
+  if (NexT.utils.supportsPDFs()) {
+    element.innerHTML = `<embed class="pdfobject" src="${url + pdfOpenFragment}" type="application/pdf" style="height: ${element.dataset.height};">`;
+  } else {
+    element.innerHTML = `<iframe src="${fullURL}" style="height: ${element.dataset.height};" frameborder="0"></iframe>`;
+  }
+});
+</script>
+
+
+<script data-pjax>
+if (document.querySelectorAll('pre.mermaid').length) {
+  NexT.utils.getScript('//cdn.jsdelivr.net/npm/mermaid@8/dist/mermaid.min.js', () => {
+    mermaid.initialize({
+      theme    : 'forest',
+      logLevel : 3,
+      flowchart: { curve     : 'linear' },
+      gantt    : { axisFormat: '%m/%d/%Y' },
+      sequence : { actorMargin: 50 }
+    });
+  }, window.mermaid);
+}
+</script>
+
+
+    <div id="pjax">
+  
+
+  
+
+  
+
+
+<script>
+NexT.utils.loadComments(document.querySelector('#valine-comments'), () => {
+  NexT.utils.getScript('//unpkg.com/valine/dist/Valine.min.js', () => {
+    var GUEST = ['nick', 'mail', 'link'];
+    var guest = 'nick,mail,link';
+    guest = guest.split(',').filter(item => {
+      return GUEST.includes(item);
+    });
+    new Valine({
+      el         : '#valine-comments',
+      verify     : false,
+      notify     : false,
+      appId      : 'uJIVXaXi09cKMc5dgb90kxxM-gzGzoHsz',
+      appKey     : 'yf8wJTDY78HMHMgsz92ReKgm',
+      placeholder: "欢迎留言",
+      avatar     : 'mm',
+      meta       : guest,
+      pageSize   : '10' || 10,
+      visitor    : false,
+      lang       : '' || 'zh-cn',
+      path       : location.pathname,
+      recordIP   : false,
+      serverURLs : ''
+    });
+  }, window.Valine);
+});
+</script>
+
+    </div>
+  <script src="/live2d-widget/autoload.js"></script>
+</body>
+</html>

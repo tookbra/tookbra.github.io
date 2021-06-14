@@ -1,0 +1,755 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 4.2.1">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/logo.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/logo.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/logo.png">
+  <link rel="mask-icon" href="/images/logo.png" color="#222">
+  <meta http-equiv="Cache-Control" content="no-transform">
+  <meta http-equiv="Cache-Control" content="no-siteapp">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+  <link rel="stylesheet" href="//cdn.jsdelivr.net/gh/fancyapps/fancybox@3/dist/jquery.fancybox.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"okboom.org","root":"/","scheme":"Gemini","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":true},"copycode":{"enable":true,"show_result":true,"style":null},"back2top":{"enable":true,"sidebar":true,"scrollpercent":true},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":true,"mediumzoom":true,"lazyload":true,"pangu":true,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":true,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":false,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":true,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}}};
+  </script>
+
+  <meta name="description" content="Spring Cloud Eureka(一) 前身今世 Spring Cloud Eureka(二) 配置文件 Spring Cloud Eureka(三) 注册中心 Spring Cloud Eureka(四) 注册中心源码 Spring Cloud Eureka(五) 客户端源码 Spring Cloud Eureka(六) 服务注册 Spring Cloud Eureka(七) 服务续约">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Spring Cloud Eureka (七) 服务续约">
+<meta property="og:url" content="https://okboom.org/2017/08/30/spring-cloud/eureka/Spring-Cloud-Eureka-Client-Heartbeat/index.html">
+<meta property="og:site_name" content="Ok Boom">
+<meta property="og:description" content="Spring Cloud Eureka(一) 前身今世 Spring Cloud Eureka(二) 配置文件 Spring Cloud Eureka(三) 注册中心 Spring Cloud Eureka(四) 注册中心源码 Spring Cloud Eureka(五) 客户端源码 Spring Cloud Eureka(六) 服务注册 Spring Cloud Eureka(七) 服务续约">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://okboom.org/images/spring-cloud/2017-08-25-eureka-logo-2627.png">
+<meta property="og:image" content="https://okboom.org/images/spring-cloud/2017-08-29-eureka-client-heart-1.png">
+<meta property="og:image" content="https://okboom.org/images/spring-cloud/2017-08-30-eureka-server-renew-1.png">
+<meta property="article:published_time" content="2017-08-30T06:30:47.000Z">
+<meta property="article:modified_time" content="2021-06-14T17:04:44.737Z">
+<meta property="article:author" content="tookbra">
+<meta property="article:tag" content="eureka">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://okboom.org/images/spring-cloud/2017-08-25-eureka-logo-2627.png">
+
+<link rel="canonical" href="https://okboom.org/2017/08/30/spring-cloud/eureka/Spring-Cloud-Eureka-Client-Heartbeat/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'zh-CN'
+  };
+</script>
+
+  <title>Spring Cloud Eureka (七) 服务续约 | Ok Boom</title>
+  
+    <script async src="https://www.googletagmanager.com/gtag/js?id=UA-105698309-2"></script>
+    <script data-pjax>
+      if (CONFIG.hostname === location.hostname) {
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
+        gtag('config', 'UA-105698309-2');
+      }
+    </script>
+
+
+  <script data-pjax>
+    var _hmt = _hmt || [];
+    (function() {
+      var hm = document.createElement("script");
+      hm.src = "https://hm.baidu.com/hm.js?bba0be0bae0736b339e0df8f68b295f8";
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(hm, s);
+    })();
+  </script>
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">Ok Boom</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+      <p class="site-subtitle" itemprop="description">”勿忘初心，方得始终“</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-主页">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>主页</a>
+
+  </li>
+        <li class="menu-item menu-item-标签">
+
+    <a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a>
+
+  </li>
+        <li class="menu-item menu-item-分类">
+
+    <a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类</a>
+
+  </li>
+        <li class="menu-item menu-item-归档">
+
+    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a>
+
+  </li>
+        <li class="menu-item menu-item-关于">
+
+    <a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>关于</a>
+
+  </li>
+  </ul>
+</nav>
+
+
+
+
+</div>
+    </header>
+
+    
+  <div class="reading-progress-bar"></div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://okboom.org/2017/08/30/spring-cloud/eureka/Spring-Cloud-Eureka-Client-Heartbeat/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/logo.png">
+      <meta itemprop="name" content="tookbra">
+      <meta itemprop="description" content="Spring Cloud, Dubbo, Netty, 物联网, Java, 中间件">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Ok Boom">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          Spring Cloud Eureka (七) 服务续约
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2017-08-30 14:30:47" itemprop="dateCreated datePublished" datetime="2017-08-30T14:30:47+08:00">2017-08-30</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2021-06-15 01:04:44" itemprop="dateModified" datetime="2021-06-15T01:04:44+08:00">2021-06-15</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/eureka/" itemprop="url" rel="index"><span itemprop="name">eureka</span></a>
+                </span>
+            </span>
+
+          
+            <span id="/2017/08/30/spring-cloud/eureka/Spring-Cloud-Eureka-Client-Heartbeat/" class="post-meta-item leancloud_visitors" data-flag-title="Spring Cloud Eureka (七) 服务续约" title="阅读次数">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-eye"></i>
+              </span>
+              <span class="post-meta-item-text">阅读次数：</span>
+              <span class="leancloud-visitors-count"></span>
+            </span>
+  
+  <span class="post-meta-item">
+    
+      <span class="post-meta-item-icon">
+        <i class="far fa-comment"></i>
+      </span>
+      <span class="post-meta-item-text">Valine：</span>
+    
+    <a title="valine" href="/2017/08/30/spring-cloud/eureka/Spring-Cloud-Eureka-Client-Heartbeat/#valine-comments" itemprop="discussionUrl">
+      <span class="post-comments-count valine-comment-count" data-xid="/2017/08/30/spring-cloud/eureka/Spring-Cloud-Eureka-Client-Heartbeat/" itemprop="commentCount"></span>
+    </a>
+  </span>
+  
+  
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <p><img data-src="/images/spring-cloud/2017-08-25-eureka-logo-2627.png" alt="eureka-logo"></p>
+<ul>
+<li><a href="/2017/08/24/spring-cloud/eureka/Spring-Cloud-Eureka-一/">Spring Cloud Eureka(一) 前身今世</a></li>
+<li><a href="/2017/08/24/spring-cloud/eureka/Spring-Cloud-Eureka-Properties/">Spring Cloud Eureka(二) 配置文件</a></li>
+<li><a href="/2017/08/24/spring-cloud/eureka/Spring-Cloud-Eureka-Server/">Spring Cloud Eureka(三) 注册中心</a></li>
+<li><a href="/2017/08/25/spring-cloud/eureka/Spring-Cloud-Eureka-Server-Source/">Spring Cloud Eureka(四) 注册中心源码</a></li>
+<li><a href="/2017/08/25/spring-cloud/eureka/Spring-Cloud-Eureka-Client-Source/">Spring Cloud Eureka(五) 客户端源码</a></li>
+<li><a href="/2017/08/29/spring-cloud/eureka/Spring-Cloud-Eureka-Client-Register/">Spring Cloud Eureka(六) 服务注册</a></li>
+<li>Spring Cloud Eureka(七) 服务续约</li>
+<li><a href="/2017/08/30/spring-cloud/eureka/Spring-Cloud-Eureka-Client-Cancel/">Spring Cloud Eureka(八) 服务下线</a></li>
+</ul>
+<a id="more"></a>
+
+<h2 id="概述"><a href="#概述" class="headerlink" title="概述"></a>概述</h2><p>在dubbo环境中，服务通过netty心跳来保持长连接，来确认服务所在的服务器是否可以访问<br>在eureka环境中，eureka客户端通过定时任务来发送心跳来确认服务所在的服务器是否可以访问</p>
+<h2 id="服务续约（Renew）"><a href="#服务续约（Renew）" class="headerlink" title="服务续约（Renew）"></a>服务续约（Renew）</h2><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Singleton</span></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">DiscoveryClient</span> <span class="keyword">implements</span> <span class="title">EurekaClient</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">    ...</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Inject</span></span><br><span class="line">    DiscoveryClient(ApplicationInfoManager applicationInfoManager, EurekaClientConfig config, AbstractDiscoveryClientOptionalArgs args,</span><br><span class="line">                        Provider&lt;BackupRegistry&gt; backupRegistryProvider) &#123;</span><br><span class="line"></span><br><span class="line">        ...</span><br><span class="line"></span><br><span class="line">        initScheduledTasks();</span><br><span class="line"></span><br><span class="line">        ...</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title">initScheduledTasks</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        ...</span><br><span class="line"></span><br><span class="line">        <span class="keyword">if</span> (clientConfig.shouldRegisterWithEureka()) &#123;</span><br><span class="line">            <span class="keyword">int</span> renewalIntervalInSecs = instanceInfo.getLeaseInfo().getRenewalIntervalInSecs();</span><br><span class="line">            <span class="keyword">int</span> expBackOffBound = clientConfig.getHeartbeatExecutorExponentialBackOffBound();</span><br><span class="line">            logger.info(<span class="string">"Starting heartbeat executor: "</span> + <span class="string">"renew interval is: "</span> + renewalIntervalInSecs);</span><br><span class="line"></span><br><span class="line">            <span class="comment">// Heartbeat timer</span></span><br><span class="line">            scheduler.schedule(</span><br><span class="line">                    <span class="keyword">new</span> TimedSupervisorTask(</span><br><span class="line">                            <span class="string">"heartbeat"</span>,</span><br><span class="line">                            scheduler,</span><br><span class="line">                            heartbeatExecutor,</span><br><span class="line">                            renewalIntervalInSecs,</span><br><span class="line">                            TimeUnit.SECONDS,</span><br><span class="line">                            expBackOffBound,</span><br><span class="line">                            <span class="keyword">new</span> HeartbeatThread()</span><br><span class="line">                    ),</span><br><span class="line">                    renewalIntervalInSecs, TimeUnit.SECONDS);</span><br><span class="line"></span><br><span class="line">                ...</span><br><span class="line"></span><br><span class="line">        &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">            logger.info(<span class="string">"Not registering with Eureka server per configuration"</span>);</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    ...</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>我们可以看到在DiscoveryClient构造函数中创建了scheduler定时任务线程池，定时执行HeartbeatThread类中的run方法<br>定时任务执行时间和eureka.client.lease-renewal-interval-in-second配置有关，默认40s</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment"> * The heartbeat task that renews the lease in the given intervals.</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="keyword">private</span> <span class="class"><span class="keyword">class</span> <span class="title">HeartbeatThread</span> <span class="keyword">implements</span> <span class="title">Runnable</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">run</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        <span class="keyword">if</span> (renew()) &#123;</span><br><span class="line">            lastSuccessfulHeartbeatTimestamp = System.currentTimeMillis();</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment"> * Renew with the eureka service by making the appropriate REST call</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="function"><span class="keyword">boolean</span> <span class="title">renew</span><span class="params">()</span> </span>&#123;</span><br><span class="line">    EurekaHttpResponse&lt;InstanceInfo&gt; httpResponse;</span><br><span class="line">    <span class="keyword">try</span> &#123;</span><br><span class="line">        httpResponse = eurekaTransport.registrationClient.sendHeartBeat(instanceInfo.getAppName(), instanceInfo.getId(), instanceInfo, <span class="keyword">null</span>);</span><br><span class="line">        logger.debug(<span class="string">"&#123;&#125; - Heartbeat status: &#123;&#125;"</span>, PREFIX + appPathIdentifier, httpResponse.getStatusCode());</span><br><span class="line">        <span class="keyword">if</span> (httpResponse.getStatusCode() == <span class="number">404</span>) &#123;</span><br><span class="line">            REREGISTER_COUNTER.increment();</span><br><span class="line">            logger.info(<span class="string">"&#123;&#125; - Re-registering apps/&#123;&#125;"</span>, PREFIX + appPathIdentifier, instanceInfo.getAppName());</span><br><span class="line">            <span class="keyword">return</span> register();</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">return</span> httpResponse.getStatusCode() == <span class="number">200</span>;</span><br><span class="line">    &#125; <span class="keyword">catch</span> (Throwable e) &#123;</span><br><span class="line">        logger.error(<span class="string">"&#123;&#125; - was unable to send heartbeat!"</span>, PREFIX + appPathIdentifier, e);</span><br><span class="line">        <span class="keyword">return</span> <span class="keyword">false</span>;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p><img data-src="/images/spring-cloud/2017-08-29-eureka-client-heart-1.png" alt="eureka-client-heart"></p>
+<h2 id="服务续约（Server端）"><a href="#服务续约（Server端）" class="headerlink" title="服务续约（Server端）"></a>服务续约（Server端）</h2><p>InstanceResource.java</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment"> * A put request for renewing lease from a client instance.</span></span><br><span class="line"><span class="comment"> *</span></span><br><span class="line"><span class="comment"> * <span class="doctag">@param</span> isReplication</span></span><br><span class="line"><span class="comment"> *            a header parameter containing information whether this is</span></span><br><span class="line"><span class="comment"> *            replicated from other nodes.</span></span><br><span class="line"><span class="comment"> * <span class="doctag">@param</span> overriddenStatus</span></span><br><span class="line"><span class="comment"> *            overridden status if any.</span></span><br><span class="line"><span class="comment"> * <span class="doctag">@param</span> status</span></span><br><span class="line"><span class="comment"> *            the &#123;<span class="doctag">@link</span> InstanceStatus&#125; of the instance.</span></span><br><span class="line"><span class="comment"> * <span class="doctag">@param</span> lastDirtyTimestamp</span></span><br><span class="line"><span class="comment"> *            last timestamp when this instance information was updated.</span></span><br><span class="line"><span class="comment"> * <span class="doctag">@return</span> response indicating whether the operation was a success or</span></span><br><span class="line"><span class="comment"> *         failure.</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="meta">@PUT</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> Response <span class="title">renewLease</span><span class="params">(</span></span></span><br><span class="line"><span class="function"><span class="params">        @HeaderParam(PeerEurekaNode.HEADER_REPLICATION)</span> String isReplication,</span></span><br><span class="line"><span class="function">        @<span class="title">QueryParam</span><span class="params">(<span class="string">"overriddenstatus"</span>)</span> String overriddenStatus,</span></span><br><span class="line"><span class="function">        @<span class="title">QueryParam</span><span class="params">(<span class="string">"status"</span>)</span> String status,</span></span><br><span class="line"><span class="function">        @<span class="title">QueryParam</span><span class="params">(<span class="string">"lastDirtyTimestamp"</span>)</span> String lastDirtyTimestamp) </span>&#123;</span><br><span class="line">    <span class="keyword">boolean</span> isFromReplicaNode = <span class="string">"true"</span>.equals(isReplication);</span><br><span class="line">    <span class="keyword">boolean</span> isSuccess = registry.renew(app.getName(), id, isFromReplicaNode);</span><br><span class="line"></span><br><span class="line">    <span class="comment">// Not found in the registry, immediately ask for a register</span></span><br><span class="line">    <span class="keyword">if</span> (!isSuccess) &#123;</span><br><span class="line">        logger.warn(<span class="string">"Not Found (Renew): &#123;&#125; - &#123;&#125;"</span>, app.getName(), id);</span><br><span class="line">        <span class="keyword">return</span> Response.status(Status.NOT_FOUND).build();</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="comment">// Check if we need to sync based on dirty time stamp, the client</span></span><br><span class="line">    <span class="comment">// instance might have changed some value</span></span><br><span class="line">    Response response = <span class="keyword">null</span>;</span><br><span class="line">    <span class="keyword">if</span> (lastDirtyTimestamp != <span class="keyword">null</span> &amp;&amp; serverConfig.shouldSyncWhenTimestampDiffers()) &#123;</span><br><span class="line">        response = <span class="keyword">this</span>.validateDirtyTimestamp(Long.valueOf(lastDirtyTimestamp), isFromReplicaNode);</span><br><span class="line">        <span class="comment">// Store the overridden status since the validation found out the node that replicates wins</span></span><br><span class="line">        <span class="keyword">if</span> (response.getStatus() == Response.Status.NOT_FOUND.getStatusCode()</span><br><span class="line">                &amp;&amp; (overriddenStatus != <span class="keyword">null</span>)</span><br><span class="line">                &amp;&amp; !(InstanceStatus.UNKNOWN.name().equals(overriddenStatus))</span><br><span class="line">                &amp;&amp; isFromReplicaNode) &#123;</span><br><span class="line">            registry.storeOverriddenStatusIfRequired(app.getAppName(), id, InstanceStatus.valueOf(overriddenStatus));</span><br><span class="line">        &#125;</span><br><span class="line">    &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">        response = Response.ok().build();</span><br><span class="line">    &#125;</span><br><span class="line">    logger.debug(<span class="string">"Found (Renew): &#123;&#125; - &#123;&#125;; reply status=&#123;&#125;"</span> + app.getName(), id, response.getStatus());</span><br><span class="line">    <span class="keyword">return</span> response;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>spring-cloud-netflix-eureka-server项目中使用InstanceRegistry继承了PeerAwareInstanceRegistryImpl，重写renew方法<br>在renew方法中做了EurekaInstanceRenewedEvent事件推送, 我们可以自定义listen来处理这件事情</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Override</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">boolean</span> <span class="title">renew</span><span class="params">(<span class="keyword">final</span> String appName, <span class="keyword">final</span> String serverId,</span></span></span><br><span class="line"><span class="function"><span class="params">        <span class="keyword">boolean</span> isReplication)</span> </span>&#123;</span><br><span class="line">    log(<span class="string">"renew "</span> + appName + <span class="string">" serverId "</span> + serverId + <span class="string">", isReplication &#123;&#125;"</span></span><br><span class="line">            + isReplication);</span><br><span class="line">    List&lt;Application&gt; applications = getSortedApplications();</span><br><span class="line">    <span class="keyword">for</span> (Application input : applications) &#123;</span><br><span class="line">        <span class="keyword">if</span> (input.getName().equals(appName)) &#123;</span><br><span class="line">            InstanceInfo instance = <span class="keyword">null</span>;</span><br><span class="line">            <span class="keyword">for</span> (InstanceInfo info : input.getInstances()) &#123;</span><br><span class="line">                <span class="keyword">if</span> (info.getId().equals(serverId)) &#123;</span><br><span class="line">                    instance = info;</span><br><span class="line">                    <span class="keyword">break</span>;</span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line">            publishEvent(<span class="keyword">new</span> EurekaInstanceRenewedEvent(<span class="keyword">this</span>, appName, serverId,</span><br><span class="line">                    instance, isReplication));</span><br><span class="line">            <span class="keyword">break</span>;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">return</span> <span class="keyword">super</span>.renew(appName, serverId, isReplication);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>在服务续约完成后，需要向其它eureka节点进行状态同步<br>PeerAwareInstanceRegistryImpl.java</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">boolean</span> <span class="title">renew</span><span class="params">(<span class="keyword">final</span> String appName, <span class="keyword">final</span> String id, <span class="keyword">final</span> <span class="keyword">boolean</span> isReplication)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">if</span> (<span class="keyword">super</span>.renew(appName, id, isReplication)) &#123;</span><br><span class="line">        replicateToPeers(Action.Heartbeat, appName, id, <span class="keyword">null</span>, <span class="keyword">null</span>, isReplication);</span><br><span class="line">        <span class="keyword">return</span> <span class="keyword">true</span>;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">return</span> <span class="keyword">false</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>服务续约操作<br>AbstractInstanceRegistry.java</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment"> * Marks the given instance of the given app name as renewed, and also marks whether it originated from</span></span><br><span class="line"><span class="comment"> * replication.</span></span><br><span class="line"><span class="comment"> *</span></span><br><span class="line"><span class="comment"> * <span class="doctag">@see</span> com.netflix.eureka.lease.LeaseManager#renew(java.lang.String, java.lang.String, boolean)</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">boolean</span> <span class="title">renew</span><span class="params">(String appName, String id, <span class="keyword">boolean</span> isReplication)</span> </span>&#123;</span><br><span class="line">    RENEW.increment(isReplication);</span><br><span class="line">    Map&lt;String, Lease&lt;InstanceInfo&gt;&gt; gMap = registry.get(appName);</span><br><span class="line">    Lease&lt;InstanceInfo&gt; leaseToRenew = <span class="keyword">null</span>;</span><br><span class="line">    <span class="keyword">if</span> (gMap != <span class="keyword">null</span>) &#123;</span><br><span class="line">        leaseToRenew = gMap.get(id);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">if</span> (leaseToRenew == <span class="keyword">null</span>) &#123;</span><br><span class="line">        RENEW_NOT_FOUND.increment(isReplication);</span><br><span class="line">        logger.warn(<span class="string">"DS: Registry: lease doesn't exist, registering resource: &#123;&#125; - &#123;&#125;"</span>, appName, id);</span><br><span class="line">        <span class="keyword">return</span> <span class="keyword">false</span>;</span><br><span class="line">    &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">        InstanceInfo instanceInfo = leaseToRenew.getHolder();</span><br><span class="line">        <span class="keyword">if</span> (instanceInfo != <span class="keyword">null</span>) &#123;</span><br><span class="line">            <span class="comment">// touchASGCache(instanceInfo.getASGName());</span></span><br><span class="line">            InstanceStatus overriddenInstanceStatus = <span class="keyword">this</span>.getOverriddenInstanceStatus(</span><br><span class="line">                    instanceInfo, leaseToRenew, isReplication);</span><br><span class="line">            <span class="keyword">if</span> (overriddenInstanceStatus == InstanceStatus.UNKNOWN) &#123;</span><br><span class="line">                logger.info(<span class="string">"Instance status UNKNOWN possibly due to deleted override for instance &#123;&#125;"</span></span><br><span class="line">                        + <span class="string">"; re-register required"</span>, instanceInfo.getId());</span><br><span class="line">                RENEW_NOT_FOUND.increment(isReplication);</span><br><span class="line">                <span class="keyword">return</span> <span class="keyword">false</span>;</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="keyword">if</span> (!instanceInfo.getStatus().equals(overriddenInstanceStatus)) &#123;</span><br><span class="line">                Object[] args = &#123;</span><br><span class="line">                        instanceInfo.getStatus().name(),</span><br><span class="line">                        instanceInfo.getOverriddenStatus().name(),</span><br><span class="line">                        instanceInfo.getId()</span><br><span class="line">                &#125;;</span><br><span class="line">                logger.info(</span><br><span class="line">                        <span class="string">"The instance status &#123;&#125; is different from overridden instance status &#123;&#125; for instance &#123;&#125;. "</span></span><br><span class="line">                                + <span class="string">"Hence setting the status to overridden status"</span>, args);</span><br><span class="line">                instanceInfo.setStatus(overriddenInstanceStatus);</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">        renewsLastMin.increment();</span><br><span class="line">        leaseToRenew.renew();</span><br><span class="line">        <span class="keyword">return</span> <span class="keyword">true</span>;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p><img data-src="/images/spring-cloud/2017-08-30-eureka-server-renew-1.png" alt="eureka-server-renew"></p>
+
+    </div>
+
+    
+    
+    
+        
+
+<div>
+<ul class="post-copyright">
+  <li class="post-copyright-author">
+    <strong>本文作者： </strong>tookbra
+  </li>
+  <li class="post-copyright-link">
+    <strong>本文链接：</strong>
+    <a href="https://okboom.org/2017/08/30/spring-cloud/eureka/Spring-Cloud-Eureka-Client-Heartbeat/" title="Spring Cloud Eureka (七) 服务续约">https://okboom.org/2017/08/30/spring-cloud/eureka/Spring-Cloud-Eureka-Client-Heartbeat/</a>
+  </li>
+  <li class="post-copyright-license">
+    <strong>版权声明： </strong>本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" rel="noopener" target="_blank"><i class="fab fa-fw fa-creative-commons"></i>BY-NC-SA</a> 许可协议。转载请注明出处！
+  </li>
+</ul>
+</div>
+
+
+      <footer class="post-footer">
+          
+          <div class="post-tags">
+              <a href="/tags/eureka/" rel="tag"><i class="fa fa-tag"></i> eureka</a>
+          </div>
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2017/08/29/spring-cloud/eureka/Spring-Cloud-Eureka-Client-Register/" rel="prev" title="Spring Cloud Eureka (六) 服务注册">
+      <i class="fa fa-chevron-left"></i> Spring Cloud Eureka (六) 服务注册
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/2017/08/30/spring-cloud/eureka/Spring-Cloud-Eureka-Client-Cancel/" rel="next" title="Spring Cloud Eureka (八) 服务下线">
+      Spring Cloud Eureka (八) 服务下线 <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+    <div class="comments" id="valine-comments"></div>
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#概述"><span class="nav-number">1.</span> <span class="nav-text">概述</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#服务续约（Renew）"><span class="nav-number">2.</span> <span class="nav-text">服务续约（Renew）</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#服务续约（Server端）"><span class="nav-number">3.</span> <span class="nav-text">服务续约（Server端）</span></a></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="tookbra"
+      src="/images/logo.png">
+  <p class="site-author-name" itemprop="name">tookbra</p>
+  <div class="site-description" itemprop="description">Spring Cloud, Dubbo, Netty, 物联网, Java, 中间件</div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives">
+          <span class="site-state-item-count">38</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+        <span class="site-state-item-count">11</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+        <span class="site-state-item-count">14</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author motion-element">
+      <span class="links-of-author-item">
+        <a href="https://github.com/tookbra" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;tookbra" rel="noopener" target="_blank"><i class="fab fa-github fa-fw"></i></a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:tookbra@gmail.com" title="E-Mail → mailto:tookbra@gmail.com" rel="noopener" target="_blank"><i class="fa fa-envelope fa-fw"></i></a>
+      </span>
+  </div>
+  <div class="cc-license motion-element" itemprop="license">
+    <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" class="cc-opacity" rel="noopener" target="_blank"><img src="/images/cc-by-nc-sa.svg" alt="Creative Commons"></a>
+  </div>
+
+
+
+      </div>
+        <div class="back-to-top motion-element">
+          <i class="fa fa-arrow-up"></i>
+          <span>0%</span>
+        </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+
+<div class="copyright">
+  
+  &copy; 2017 – 
+  <span itemprop="copyrightYear">2021</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">tookbra</span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Gemini</a> 强力驱动
+  </div>
+
+        
+
+
+
+
+
+
+<script data-pjax>
+  (function() {
+    function leancloudSelector(url) {
+      url = encodeURI(url);
+      return document.getElementById(url).querySelector('.leancloud-visitors-count');
+    }
+
+    function addCount(Counter) {
+      var visitors = document.querySelector('.leancloud_visitors');
+      var url = decodeURI(visitors.id);
+      var title = visitors.dataset.flagTitle;
+
+      Counter('get', '/classes/Counter?where=' + encodeURIComponent(JSON.stringify({ url })))
+        .then(response => response.json())
+        .then(({ results }) => {
+          if (results.length > 0) {
+            var counter = results[0];
+            leancloudSelector(url).innerText = counter.time + 1;
+            Counter('put', '/classes/Counter/' + counter.objectId, { time: { '__op': 'Increment', 'amount': 1 } })
+              .catch(error => {
+                console.error('Failed to save visitor count', error);
+              });
+          } else {
+              leancloudSelector(url).innerText = 'Counter not initialized! More info at console err msg.';
+              console.error('ATTENTION! LeanCloud counter has security bug, see how to solve it here: https://github.com/theme-next/hexo-leancloud-counter-security. \n However, you can still use LeanCloud without security, by setting `security` option to `false`.');
+            
+          }
+        })
+        .catch(error => {
+          console.error('LeanCloud Counter Error', error);
+        });
+    }
+
+    function showTime(Counter) {
+      var visitors = document.querySelectorAll('.leancloud_visitors');
+      var entries = [...visitors].map(element => {
+        return decodeURI(element.id);
+      });
+
+      Counter('get', '/classes/Counter?where=' + encodeURIComponent(JSON.stringify({ url: { '$in': entries } })))
+        .then(response => response.json())
+        .then(({ results }) => {
+          for (let url of entries) {
+            let target = results.find(item => item.url === url);
+            leancloudSelector(url).innerText = target ? target.time : 0;
+          }
+        })
+        .catch(error => {
+          console.error('LeanCloud Counter Error', error);
+        });
+    }
+
+    let { app_id, app_key, server_url } = {"enable":true,"app_id":"uJIVXaXi09cKMc5dgb90kxxM-gzGzoHsz","app_key":"yf8wJTDY78HMHMgsz92ReKgm","server_url":null,"security":true};
+    function fetchData(api_server) {
+      var Counter = (method, url, data) => {
+        return fetch(`${api_server}/1.1${url}`, {
+          method,
+          headers: {
+            'X-LC-Id'     : app_id,
+            'X-LC-Key'    : app_key,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(data)
+        });
+      };
+      if (CONFIG.page.isPost) {
+        if (CONFIG.hostname !== location.hostname) return;
+        addCount(Counter);
+      } else if (document.querySelectorAll('.post-title-link').length >= 1) {
+        showTime(Counter);
+      }
+    }
+
+    let api_server = app_id.slice(-9) !== '-MdYXbMMI' ? server_url : `https://${app_id.slice(0, 8).toLowerCase()}.api.lncldglobal.com`;
+
+    if (api_server) {
+      fetchData(api_server);
+    } else {
+      fetch('https://app-router.leancloud.cn/2/route?appId=' + app_id)
+        .then(response => response.json())
+        .then(({ api_server }) => {
+          fetchData('https://' + api_server);
+        });
+    }
+  })();
+</script>
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="//cdn.jsdelivr.net/gh/theme-next/theme-next-pjax@0/pjax.min.js"></script>
+  <script src="//cdn.jsdelivr.net/npm/jquery@3/dist/jquery.min.js"></script>
+  <script src="//cdn.jsdelivr.net/gh/fancyapps/fancybox@3/dist/jquery.fancybox.min.js"></script>
+  <script src="//cdn.jsdelivr.net/npm/medium-zoom@1/dist/medium-zoom.min.js"></script>
+  <script src="//cdn.jsdelivr.net/npm/lozad@1/dist/lozad.min.js"></script>
+  <script src="//cdn.jsdelivr.net/npm/pangu@4/dist/browser/pangu.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/pisces.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+  <script>
+var pjax = new Pjax({
+  selectors: [
+    'head title',
+    '#page-configurations',
+    '.content-wrap',
+    '.post-toc-wrap',
+    '.languages',
+    '#pjax'
+  ],
+  switches: {
+    '.post-toc-wrap': Pjax.switches.innerHTML
+  },
+  analytics: false,
+  cacheBust: false,
+  scrollTo : !CONFIG.bookmark.enable
+});
+
+window.addEventListener('pjax:success', () => {
+  document.querySelectorAll('script[data-pjax], script#page-configurations, #pjax script').forEach(element => {
+    var code = element.text || element.textContent || element.innerHTML || '';
+    var parent = element.parentNode;
+    parent.removeChild(element);
+    var script = document.createElement('script');
+    if (element.id) {
+      script.id = element.id;
+    }
+    if (element.className) {
+      script.className = element.className;
+    }
+    if (element.type) {
+      script.type = element.type;
+    }
+    if (element.src) {
+      script.src = element.src;
+      // Force synchronous loading of peripheral JS.
+      script.async = false;
+    }
+    if (element.dataset.pjax !== undefined) {
+      script.dataset.pjax = '';
+    }
+    if (code !== '') {
+      script.appendChild(document.createTextNode(code));
+    }
+    parent.appendChild(script);
+  });
+  NexT.boot.refresh();
+  // Define Motion Sequence & Bootstrap Motion.
+  if (CONFIG.motion.enable) {
+    NexT.motion.integrator
+      .init()
+      .add(NexT.motion.middleWares.subMenu)
+      .add(NexT.motion.middleWares.postList)
+      .bootstrap();
+  }
+  NexT.utils.updateSidebarPosition();
+});
+</script>
+
+
+
+
+  
+  <script data-pjax>
+    (function(){
+      var bp = document.createElement('script');
+      var curProtocol = window.location.protocol.split(':')[0];
+      bp.src = (curProtocol === 'https') ? 'https://zz.bdstatic.com/linksubmit/push.js' : 'http://push.zhanzhang.baidu.com/push.js';
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(bp, s);
+    })();
+  </script>
+
+
+
+
+
+
+
+
+
+
+
+<script data-pjax>
+document.querySelectorAll('.pdfobject-container').forEach(element => {
+  let url = element.dataset.target;
+  let pdfOpenParams = {
+    navpanes : 0,
+    toolbar  : 0,
+    statusbar: 0,
+    pagemode : 'thumbs',
+    view     : 'FitH'
+  };
+  let pdfOpenFragment = '#' + Object.entries(pdfOpenParams).map(([key, value]) => `${key}=${encodeURIComponent(value)}`).join('&');
+  let fullURL = `/lib/pdf/web/viewer.html?file=${encodeURIComponent(url)}${pdfOpenFragment}`;
+
+  if (NexT.utils.supportsPDFs()) {
+    element.innerHTML = `<embed class="pdfobject" src="${url + pdfOpenFragment}" type="application/pdf" style="height: ${element.dataset.height};">`;
+  } else {
+    element.innerHTML = `<iframe src="${fullURL}" style="height: ${element.dataset.height};" frameborder="0"></iframe>`;
+  }
+});
+</script>
+
+
+<script data-pjax>
+if (document.querySelectorAll('pre.mermaid').length) {
+  NexT.utils.getScript('//cdn.jsdelivr.net/npm/mermaid@8/dist/mermaid.min.js', () => {
+    mermaid.initialize({
+      theme    : 'forest',
+      logLevel : 3,
+      flowchart: { curve     : 'linear' },
+      gantt    : { axisFormat: '%m/%d/%Y' },
+      sequence : { actorMargin: 50 }
+    });
+  }, window.mermaid);
+}
+</script>
+
+
+    <div id="pjax">
+  
+
+  
+
+  
+
+
+<script>
+NexT.utils.loadComments(document.querySelector('#valine-comments'), () => {
+  NexT.utils.getScript('//unpkg.com/valine/dist/Valine.min.js', () => {
+    var GUEST = ['nick', 'mail', 'link'];
+    var guest = 'nick,mail,link';
+    guest = guest.split(',').filter(item => {
+      return GUEST.includes(item);
+    });
+    new Valine({
+      el         : '#valine-comments',
+      verify     : false,
+      notify     : false,
+      appId      : 'uJIVXaXi09cKMc5dgb90kxxM-gzGzoHsz',
+      appKey     : 'yf8wJTDY78HMHMgsz92ReKgm',
+      placeholder: "欢迎留言",
+      avatar     : 'mm',
+      meta       : guest,
+      pageSize   : '10' || 10,
+      visitor    : false,
+      lang       : '' || 'zh-cn',
+      path       : location.pathname,
+      recordIP   : false,
+      serverURLs : ''
+    });
+  }, window.Valine);
+});
+</script>
+
+    </div>
+  <script src="/live2d-widget/autoload.js"></script>
+</body>
+</html>
